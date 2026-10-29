@@ -1,0 +1,33 @@
+name: Halloween Ticket Monitor
+
+on:
+  schedule:
+    # 每小时跑一次（UTC 分钟随机避开整点拥堵，约北京时间每小时第7分）
+    - cron: "7 * * * *"
+  workflow_dispatch: {}   # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run monitor
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          PAGES_URL: https://${{ github.repository_owner }}.github.io/halloween-monitor/
+        run: python monitor.py
+
+      - name: Publish report to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./report
+          keep_files: false
