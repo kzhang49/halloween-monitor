@@ -482,6 +482,7 @@ def render(D):
         hint2 += "<b style='color:%s'>10.30 场按当前卖速预计收官 ~%s（%.0f%%），不售罄</b>。" % (BLUE, fmt(f30["strong_final"]), f30["strong_final"] / 2250 * 100)
     html = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"><meta http-equiv="refresh" content="3600">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache">
 <title>万圣节库存消耗进度 · 10.30 / 10.31</title><style>__CSS__</style></head><body><div class="container">
 <div class="card"><h1>万圣节库存消耗进度 · 10.30（周五）vs 10.31（周六 · 万圣夜）</h1>
 <div class="subtitle">数据截至 <b>__STAMP__</b>（每小时自动更新）｜ 来源：Superset 看板 27【实时】散客票务监测 ｜ 口径：<b>支付成功票数 ÷ 单日库存</b>（超早 300 / 早场 900 / 正价 1,050，每晚独立）｜ 已剔除 City Drink、限时参团、员工福利场次票；<b>嘉年华会员专属并入正价票</b>；场次销售延续至自然日次日 0 点后（计入该场）</div></div>
@@ -549,7 +550,8 @@ def send_feishu(D):
     if alerts: text = "🚨 " + "；".join(alerts) + "\n\n" + text
     elements = [{"tag": "markdown", "content": text}]
     if pages:
-        elements.append({"tag": "action", "actions": [{"tag": "button", "text": {"tag": "plain_text", "content": "📊 打开完整看板（含预测曲线）"}, "url": pages, "type": "primary"}]})
+        bust = pages.rstrip("/") + "/?v=" + D["stamp"].replace("-", "").replace(" ", "").replace(":", "")
+        elements.append({"tag": "action", "actions": [{"tag": "button", "text": {"tag": "plain_text", "content": "📊 打开完整看板（含预测曲线）"}, "url": bust, "type": "primary"}]})
     elements.append({"tag": "note", "elements": [{"tag": "plain_text", "content": "已售=支付成功(扣退款)；嘉年华会员并入正价；不含City Drink/参团/员工票；销售延续至次日0点后"}]})
     card = {"msg_type": "interactive", "card": {"header": {"title": {"tag": "plain_text", "content": "🎃 万圣节库存监控 · " + D["stamp"]}, "template": "red" if alerts else "orange"}, "elements": elements}}
     req = urllib.request.Request(hook, data=json.dumps(card).encode(), headers={"Content-Type": "application/json"})
