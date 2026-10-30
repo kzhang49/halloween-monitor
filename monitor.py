@@ -129,7 +129,7 @@ def main():
         try:
             pt = datetime.datetime.strptime(prev["stamp"], "%Y-%m-%d %H:%M")
             age_min = (now - pt).total_seconds() / 60
-            if age_min < 40:
+            if age_min < 40 and not os.environ.get("FORCE"):
                 print("skip: last run %.0f min ago" % age_min); return
         except Exception:
             pass
@@ -231,11 +231,13 @@ def main():
 
 # ---------------- SVG 图 ----------------
 def fig_progress(D):
-    W, H = 1132, 566; PW = 548
-    out = ['<svg viewBox="0 0 %d %d" width="100%%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,\'PingFang SC\',Arial,sans-serif">' % (W, H)]
+    """每晚一个独立 SVG，桌面双栏 / 手机堆叠（CSS grid 控制）"""
+    H = 566; PW = 548
     label = {"10.30": "10.30 周五", "10.31": "10.31 周六 · 万圣夜"}
     names = {"超早": ("超级早鸟票", "428 RMB"), "早场": ("早场票", "458 RMB"), "正价": ("正价票（含嘉年华会员）", "488 RMB")}
-    for k, x in (("10.30", 0), ("10.31", W - PW)):
+    panels = []
+    for k, x in (("10.30", 0), ("10.31", 0)):
+        out = ['<svg viewBox="0 0 %d %d" width="100%%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,\'PingFang SC\',Arial,sans-serif">' % (PW, H)]
         n = D["nights"][k]; col = BLUE if k == "10.30" else ORANGE
         out.append('<rect x="%d" y="0" width="%d" height="%d" rx="12" fill="%s"/>' % (x, PW, H, PANEL))
         out.append('<text x="%d" y="32" fill="%s" font-size="17" font-weight="700">%s</text>' % (x + 22, INK, label[k]))
@@ -268,8 +270,10 @@ def fig_progress(D):
         out.append('<rect x="%d" y="%d" width="%.1f" height="26" rx="6" fill="%s"/>' % (x + 22, by_, barw * trate / 100, GREEN))
         lab = "%s/2,250" % fmt(n["paid"]); fw = barw * trate / 100
         out.append('<text x="%s" y="%d" fill="%s" font-size="12.5" font-weight="600">%s</text>' % (x + 32 if fw > 78 else "%.1f" % (x + 22 + fw + 9), by_ + 18, "#FFF" if fw > 78 else INK, lab))
-    out.append("</svg>")
-    return "\n".join(out)
+        out.append("</svg>")
+        panels.append("\n".join(out))
+    return ('<div class="panels">' +
+            "".join('<div class="panel">%s</div>' % p for p in panels) + "</div>")
 
 def fig_compare(D):
     W, H = 1132, 300; x0, x1, ytop, ybot = 66, W - 42, 56, 232
@@ -455,6 +459,22 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 .mbar { height:6px; border-radius:3px; background:#EDEFF2; overflow:hidden; }
 .mbar span { display:block; height:6px; border-radius:3px; }
 .foot { text-align:center; font-size:11px; color:#B0B7C3; margin-top:6px; }
+/* 响应式：双栏进度图 + 宽图/宽表横滑 */
+.panels { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.figscroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.figscroll svg { display:block; }
+.table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.table-wrap table { min-width:640px; }
+@media (max-width:768px) {
+  body { padding:12px 0 32px; }
+  .container { padding:0 8px; }
+  .card { padding:16px 14px 18px; border-radius:12px; }
+  h1 { font-size:18px; line-height:1.4; }
+  .subtitle { font-size:11.5px; }
+  .panels { grid-template-columns:1fr; }
+  .figscroll svg { min-width:640px; }
+  .hint { font-size:11.5px; }
+}
 """
 
 def render(D):
@@ -492,9 +512,12 @@ def render(D):
 <b>⑥ 数据源</b>：Superset 看板 27，数据集 53，看板缓存 5 分钟；本页每小时自动生成。</div></div>
 <div class="foot">INS LAND · 万圣节票务库存监测 · 生成于 __STAMP__</div></div></body></html>"""
     html = html.replace("__CSS__", CSS).replace("__STAMP__", D["stamp"]).replace("__HINT2__", hint2)
-    html = html.replace("__FIG1__", fig_progress(D)).replace("__FIG2__", fig_compare(D))
-    html = html.replace("__FIG3__", fig_forecast(D)).replace("__FIG4__", fig_daily(D))
-    html = html.replace("__TABLE__", detail_table(D)).replace("__PRED__", pred_table(D))
+    html = html.replace("__FIG1__", fig_progress(D))
+    html = html.replace("__FIG2__", '<div class="figscroll">%s</div>' % fig_compare(D))
+    html = html.replace("__FIG3__", '<div class="figscroll">%s</div>' % fig_forecast(D))
+    html = html.replace("__FIG4__", '<div class="figscroll">%s</div>' % fig_daily(D))
+    html = html.replace("__TABLE__", '<div class="table-wrap">%s</div>' % detail_table(D))
+    html = html.replace("__PRED__", '<div class="table-wrap">%s</div>' % pred_table(D))
     return html
 
 def send_feishu(D):
