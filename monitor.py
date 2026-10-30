@@ -105,14 +105,38 @@ def cascade(lefts, day_total, today_sold, profile):
         out[t] = hour_of(need, day_total, today_sold, profile) if lefts.get(t, 0) > 0 else None
     return out
 
+def profile_cum(profile, hour_float):
+    return sum(w for h, w in profile.items() if h < hour_float)
+
+def fetch_prev(pages_url):
+    """从 Pages 读取上一轮的 latest.json（用于增量 & 防重复推送）"""
+    try:
+        with urllib.request.urlopen(pages_url.rstrip("/") + "/latest.json", timeout=15) as r:
+            return json.load(r)
+    except Exception as e:
+        print("prev fetch failed:", e); return None
+
 # ---------------- 主流程 ----------------
 def main():
     now = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
     today = now.date().isoformat()
     stamp = now.strftime("%Y-%m-%d %H:%M")
+    pages_url = os.environ.get("PAGES_URL", "").strip()
+
+    prev = fetch_prev(pages_url) if pages_url else None
+    # 防重复：上一轮距今 <40 分钟则跳过（每小时排了 2 个 cron 防 GitHub 丢任务）
+    if prev and prev.get("stamp"):
+        try:
+            pt = datetime.datetime.strptime(prev["stamp"], "%Y-%m-%d %H:%M")
+            age_min = (now - pt).total_seconds() / 60
+            if age_min < 40:
+                print("skip: last run %.0f min ago" % age_min); return
+        except Exception:
+            pass
     agg, daily = load_data()
 
-    D = {"stamp": stamp, "today": today, "nights": {}, "daily": {n: dict(daily[n]) for n in ("10.30", "10.31")}}
+    D = {"stamp": stamp, "today": today, "nights": {}, "deltas": {},
+         "daily": {n: dict(daily[n]) for n in ("10.30", "10.31")}}
     for night in ("10.30", "10.31"):
         per = {}
         for t in ("超早", "早场", "正价"):
@@ -121,6 +145,16 @@ def main():
         tot_paid = sum(p["paid"] for p in per.values())
         D["nights"][night] = {"per": per, "paid": tot_paid, "stock": 2250,
                               "left": 2250 - tot_paid, "pct": pct(tot_paid, 2250)}
+    # 较上一轮的每小时增量（按票型 + 合计）
+    if prev and prev.get("nights"):
+        for night in ("10.30", "10.31"):
+            pn = prev["nights"].get(night)
+            if not pn: continue
+            dd = {}
+            for t in ("超早", "早场", "正价"):
+                dd[t] = D["nights"][night]["per"][t]["paid"] - pn.get("per", {}).get(t, {}).get("paid", 0)
+            dd["total"] = D["nights"][night]["paid"] - pn.get("paid", 0)
+            D["deltas"][night] = dd
 
     # 累计曲线（含 sale_dt=次日 的 0 点后销售，天然归属该场）
     dates = sorted(set(x for n in daily for x in daily[n]))
@@ -138,12 +172,23 @@ def main():
     t30_sold_today = daily["10.30"].get(today, 0)
     t31_sold_today = daily["10.31"].get(today, 0)
 
+    # 实际卖速修正：用当天已过时段的"实测/预期"比例缩放当天总量（跟随每小时售票速度）
+    hour_f = now.hour + now.minute / 60.0
+    def pace_ratio(sold_today, est_today, profile):
+        exp = est_today * profile_cum(profile, hour_f)
+        if exp < 30 or sold_today <= 0: return 1.0
+        return min(max(sold_today / exp, 0.6), 1.8)
+
     fc = {}
     if today <= ev30:
         # 10.30 场：T-0 = 10.30 当天（销售延续至 10.31 凌晨）
         past30 = sold30 - (t30_sold_today if today == ev30 else 0)
         strong_final = past30 / (1 - FRI_T0) if past30 > 0 else sold30
         strong_today = max(strong_final * FRI_T0, t30_sold_today)
+        if today == ev30:
+            r = pace_ratio(t30_sold_today, strong_today, T0_PROFILE)
+            strong_today *= r
+            strong_final = past30 + strong_today
         weak_final = past30 / (1 - HOLIDAY_T0) if past30 > 0 else sold30
         weak_today = max(weak_final * HOLIDAY_T0, t30_sold_today)
         lefts = {t: D["nights"]["10.30"]["per"][t]["left"] for t in ("超早", "早场", "正价")}
@@ -155,13 +200,22 @@ def main():
                        "hours": strong_h, "full_hour": strong_full}
     if today <= ev31:
         # 10.31 场：T-1 = 10.30，T-0 = 10.31
-        final31 = sold31 / (1 - SAT_T1 - SAT_T0)
-        if today == ev31:   # 当天
+        if today == ev31:   # 当天（T-0）
+            past = sold31 - t31_sold_today
+            final31 = past / (1 - SAT_T0)
             inc_today = max(final31 * SAT_T0, t31_sold_today)
             prof = T0_PROFILE
-        else:               # T-1 或更早
-            inc_today = max(final31 * SAT_T1, t31_sold_today) if today == ev30 else 0
+        elif today == ev30:  # T-1
+            past = sold31 - t31_sold_today
+            final31 = past / (1 - SAT_T1 - SAT_T0)
+            inc_today = max(final31 * SAT_T1, t31_sold_today)
             prof = T1_PROFILE
+        else:                # T-2 及更早，沿用静态外推
+            final31 = sold31 / (1 - SAT_T1 - SAT_T0)
+            inc_today = 0; prof = T1_PROFILE
+        if inc_today > 0:
+            r = pace_ratio(t31_sold_today, inc_today, prof)
+            inc_today *= r
         lefts31 = {t: D["nights"]["10.31"]["per"][t]["left"] for t in ("超早", "早场", "正价")}
         hours31 = cascade(lefts31, inc_today, t31_sold_today, prof)
         full31 = hour_of(D["nights"]["10.31"]["left"], inc_today, t31_sold_today, prof)
@@ -349,8 +403,11 @@ def pred_table(D):
                 entries.append(("10.30 周五", cn, fmt(p["left"]), hh(h),
                                 "高" if t == "超早" else ("中" if t == "早场" else "中低"),
                                 "强场景当天总量 ~%s 张（当天占比≈74%%）；弱场景剩票" % fmt(f["strong_today"])))
-        entries.append(("10.30 周五", "全场合计", fmt(n["left"]),
-                        "强场景：%s 售罄；弱场景：收官 ~%s（%.0f%%）" % (hh(f["full_hour"]), fmt(f["weak_final"]), f["weak_final"] / 2250 * 100),
+        if f["full_hour"] and f["full_hour"] < 99:
+            when30 = "强场景：%s 售罄；弱场景：收官 ~%s（%.0f%%）" % (hh(f["full_hour"]), fmt(f["weak_final"]), f["weak_final"] / 2250 * 100)
+        else:
+            when30 = "按当前卖速收官 ~%s（%.0f%%），预计不售罄" % (fmt(f["strong_final"]), f["strong_final"] / 2250 * 100)
+        entries.append(("10.30 周五", "全场合计", fmt(n["left"]), when30,
                         "中", "取决于当天购买占比：普通周五 71%%–76%% → 售罄；假日型提前预订 → 不售罄"))
     for sess, typ, left, when, conf, why in entries:
         sess_td = "<td class='psess'>%s</td>" % sess if sess != last else "<td></td>"
@@ -409,6 +466,9 @@ def render(D):
         hint2 += " 据此外推：<b style='color:%s'>10.31 场预计 %s 售罄，当天无票可售</b>；" % (ORANGE, hh(h31))
     if h30 and h30 < 99:
         hint2 += "<b style='color:%s'>10.30 场强场景下 %s 售罄</b>（弱场景收官约 %.0f%%）。" % (BLUE, hh(h30), D["forecast"]["10.30"]["weak_final"] / 2250 * 100)
+    elif "10.30" in fc:
+        f30 = fc["10.30"]
+        hint2 += "<b style='color:%s'>10.30 场按当前卖速预计收官 ~%s（%.0f%%），不售罄</b>。" % (BLUE, fmt(f30["strong_final"]), f30["strong_final"] / 2250 * 100)
     html = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"><meta http-equiv="refresh" content="3600">
 <title>万圣节库存消耗进度 · 10.30 / 10.31</title><style>__CSS__</style></head><body><div class="container">
@@ -443,20 +503,34 @@ def send_feishu(D):
         print("no webhook, skip"); return
     pages = os.environ.get("PAGES_URL", "").strip()
     lines, alerts = [], []
-    for k in ("10.30", "10.31"):
+    for idx, k in enumerate(("10.30", "10.31")):
+        if idx: lines.append("")   # 两场之间空行分隔
         n = D["nights"][k]; lab = "10.30 周五场" if k == "10.30" else "10.31 周六·万圣夜"
-        lines.append("**%s** 合计 %s/2,250（%.1f%%）" % (lab, fmt(n["paid"]), n["pct"]))
+        dd = D.get("deltas", {}).get(k)
+        inc = "　⏫ 较上小时 **+%s**" % fmt(dd["total"]) if dd else ""
+        lines.append("**%s** 合计 %s/2,250（%.1f%%）%s" % (lab, fmt(n["paid"]), n["pct"], inc))
         for t in ("超早", "早场", "正价"):
             p = n["per"][t]
             tag = "❗已售罄" if p["left"] <= 0 else ("⚠️仅剩 %s" % fmt(p["left"]) if p["left"] <= 250 else "余 %s" % fmt(p["left"]))
-            lines.append("　· %s：%s/%s（%.1f%%）%s" % (t, fmt(p["paid"]), fmt(p["stock"]), p["pct"], tag))
+            d1 = "（+%s）" % fmt(dd[t]) if dd and dd.get(t) else ""
+            lines.append("　· %s：%s/%s（%.1f%%）%s%s" % (t, fmt(p["paid"]), fmt(p["stock"]), p["pct"], tag, d1))
             if 0 < p["left"] <= 250: alerts.append("%s %s 仅剩 %s 张" % (k, t, fmt(p["left"])))
         f = D["forecast"].get(k)
         if f:
+            hs = f.get("hours", {})
+            seg = " / ".join("%s %s" % (t, hh(hs.get(t))) for t in ("超早", "早场", "正价") if n["per"][t]["left"] > 0)
             if k == "10.31" and f.get("sellout"):
-                lines.append("　📈 预测：%s 全场售罄" % hh(f["full_hour"]))
+                lines.append("　📈 预测：%s 全场售罄（%s）" % (hh(f["full_hour"]), seg))
             elif k == "10.30":
-                lines.append("　📈 预测：强场景 %s 售罄 / 弱场景收官 ~%s（%.0f%%）" % (hh(f["full_hour"]), fmt(f["weak_final"]), f["weak_final"] / 2250 * 100))
+                if f["full_hour"] and f["full_hour"] < 99:
+                    lines.append("　📈 预测：强场景 %s 售罄（%s）/ 弱场景收官 ~%s（%.0f%%）"
+                                 % (hh(f["full_hour"]), seg, fmt(f["weak_final"]), f["weak_final"] / 2250 * 100))
+                else:
+                    lines.append("　📈 预测：按当前卖速收官 ~%s（%.0f%%），预计不售罄（%s）"
+                                 % (fmt(f["strong_final"]), f["strong_final"] / 2250 * 100, seg))
+        if idx == 0:
+            lines.append("")   # 空行空间
+            lines.append("— — — — — — — — — —")
     text = "\n".join(lines)
     if alerts: text = "🚨 " + "；".join(alerts) + "\n\n" + text
     elements = [{"tag": "markdown", "content": text}]
