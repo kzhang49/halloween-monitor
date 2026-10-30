@@ -635,8 +635,13 @@ def send_feishu(D):
         if f:
             hs = f.get("hours", {})
             seg = " / ".join("%s %s" % (t, hh(hs.get(t))) for t in ("超早", "早场", "正价") if n["per"][t]["left"] > 0)
-            if k == "10.31" and f.get("sellout"):
-                lines.append("　📈 预测：%s 全场售罄（%s）" % (hh(f["full_hour"]), seg))
+            if k == "10.31":
+                if f.get("sellout"):
+                    lines.append("　📈 预测：%s 全场售罄（%s）" % (hh(f["full_hour"]), seg))
+                else:
+                    sold_seg = "、".join("%s %s 售罄" % (t, hh(hs.get(t))) for t in ("超早", "早场", "正价") if n["per"][t]["left"] > 0 and hs.get(t) and hs[t] < 99)
+                    tail = ("；" + sold_seg) if sold_seg else ""
+                    lines.append("　📈 预测：按当前卖速收官 ~%s（%.0f%%）预计不售罄%s" % (fmt(f["final_est"]), f["final_est"] / 2250 * 100, tail))
             elif k == "10.30":
                 if f["full_hour"] and f["full_hour"] < 99:
                     lines.append("　📈 预测：强场景 %s 售罄（%s）/ 弱场景收官 ~%s（%.0f%%）"
