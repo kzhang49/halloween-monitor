@@ -25,12 +25,7 @@ jobs:
           rm -rf report
           STAMP=$(curl -s "https://${{ github.repository_owner }}.github.io/halloween-monitor/latest.json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stamp',''))" || true)
           if [ -n "$STAMP" ]; then
-            AGE=$(python3 -c "
-from datetime import datetime, timedelta
-now = datetime.utcnow() + timedelta(hours=8)
-pt = datetime.strptime('$STAMP', '%Y-%m-%d %H:%M')
-print(int((now - pt).total_seconds() // 60))
-")
+            AGE=$(python3 -c "from datetime import datetime,timedelta; print(int(((datetime.utcnow()+timedelta(hours=8))-datetime.strptime('$STAMP','%Y-%m-%d %H:%M')).total_seconds()//60))")
             echo "last run age: ${AGE} min"
             if [ "$AGE" -lt 40 ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
