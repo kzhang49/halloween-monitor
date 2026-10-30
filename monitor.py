@@ -166,6 +166,8 @@ def main():
     # 实际卖速修正：用当天已过时段的"实测/预期"比例缩放当天总量（跟随每小时售票速度）
     hour_f = now.hour + now.minute / 60.0
     def pace_ratio(sold_today, est_today, profile):
+        if hour_f < 12:  # 中午前样本太小（分时累计<15%），不做修正，沿用静态外推
+            return 1.0
         exp = est_today * profile_cum(profile, hour_f)
         if exp < 30 or sold_today <= 0: return 1.0
         return min(max(sold_today / exp, 0.6), 1.8)
@@ -266,33 +268,41 @@ def fig_progress(D):
     return ('<div class="panels">' +
             "".join('<div class="panel">%s</div>' % p for p in panels) + "</div>")
 
-def fig_compare(D):
-    W, H = 1132, 300; x0, x1, ytop, ybot = 66, W - 42, 56, 232
+def fig_compare(D, mobile=False):
+    W = 560 if mobile else 1132; H = 300
+    x0 = 46 if mobile else 66; x1 = W - 24; ytop, ybot = 56, 232
+    bw = 30 if mobile else 54
+    fs = 10.5 if mobile else 12
     out = ['<svg viewBox="0 0 %d %d" width="100%%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,\'PingFang SC\',Arial,sans-serif">' % (W, H)]
     for v in range(0, 101, 20):
         yy = ybot - (ybot - ytop) * v / 100
         out.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="%s" %s/>' % (x0, yy, x1, yy, LINE, 'stroke-dasharray="3 4"' if v else ""))
-        out.append('<text x="%d" y="%.1f" fill="%s" font-size="11" text-anchor="end">%d%%</text>' % (x0 - 10, yy + 4, FAINT, v))
-    cats = ["超级早鸟", "早场", "正价", "2 点前合计"]
+        out.append('<text x="%d" y="%.1f" fill="%s" font-size="10" text-anchor="end">%d%%</text>' % (x0 - 8, yy + 4, FAINT, v))
+    cats = ["超级早鸟", "早场", "正价", "合计"]
     vals = {k: [D["nights"][k]["per"][t]["pct"] for t in ("超早", "早场", "正价")] + [D["nights"][k]["pct"]] for k in ("10.30", "10.31")}
-    slot = (x1 - x0) / len(cats); bw = 54
+    slot = (x1 - x0) / len(cats)
     for i, c in enumerate(cats):
         cx = x0 + slot * (i + 0.5)
         for j, k in enumerate(("10.30", "10.31")):
             v = vals[k][i]; h = (ybot - ytop) * min(v, 100) / 100
-            bx = cx - bw - 6 + j * (bw + 12); col = BLUE if k == "10.30" else ORANGE
+            bx = cx - bw - 4 + j * (bw + 8); col = BLUE if k == "10.30" else ORANGE
             out.append('<rect x="%.1f" y="%.1f" width="%d" height="%.1f" rx="4" fill="%s" fill-opacity="%s"/>' % (bx, ybot - h, bw, max(h, 1), col, "1" if k == "10.31" else "0.45"))
-            out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="12" font-weight="700" text-anchor="middle">%.1f%%</text>' % (bx + bw / 2, ybot - h - 8, col if k == "10.31" else SUB, v))
-        out.append('<text x="%.1f" y="%d" fill="%s" font-size="12.5" text-anchor="middle">%s</text>' % (cx, ybot + 24, INK, c))
+            out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="700" text-anchor="middle">%.0f%%</text>' % (bx + bw / 2, ybot - h - 7, col if k == "10.31" else SUB, fs, v))
+        out.append('<text x="%.1f" y="%d" fill="%s" font-size="%.1f" text-anchor="middle">%s</text>' % (cx, ybot + 24, INK, fs + 0.5, c))
     lx = x0
     for k, txt in (("10.30", "10.30 周五"), ("10.31", "10.31 周六")):
         out.append('<rect x="%d" y="22" width="10" height="10" rx="2" fill="%s" fill-opacity="%s"/>' % (lx, BLUE if k == "10.30" else ORANGE, "1" if k == "10.31" else "0.45"))
-        out.append('<text x="%d" y="31" fill="%s" font-size="12">%s</text>' % (lx + 16, SUB, txt)); lx += 16 + tw(txt, 12) + 22
+        out.append('<text x="%d" y="31" fill="%s" font-size="11">%s</text>' % (lx + 16, SUB, txt)); lx += 16 + tw(txt, 11) + 20
     out.append("</svg>")
     return "\n".join(out)
 
-def fig_forecast(D):
-    W, H = 1132, 356; x0, x1, ytop, ybot = 70, W - 190, 40, 280; ymax = 2600
+def fig_forecast(D, mobile=False):
+    if mobile:
+        W, H = 560, 400; x0, x1, ytop, ybot = 44, W - 16, 46, 318
+    else:
+        W, H = 1132, 356; x0, x1, ytop, ybot = 70, W - 190, 40, 280
+    ymax = 2600
+    gstep = 650 if mobile else 400
     dates, cum, today = D["dates"], D["cum"], D["today"]
     future = []
     d = datetime.date.fromisoformat(dates[-1]) + datetime.timedelta(days=1)
@@ -302,26 +312,29 @@ def fig_forecast(D):
     n = len(dates_ext); step = (x1 - x0) / (n - 1)
     X = lambda i: x0 + step * i
     Y = lambda v: ybot - (ybot - ytop) * v / ymax
+    fs = 10.5 if mobile else 12
     out = ['<svg viewBox="0 0 %d %d" width="100%%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,\'PingFang SC\',Arial,sans-serif">' % (W, H)]
-    for v in range(0, ymax + 1, 400):
+    for v in range(0, ymax + 1, gstep):
         out.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="%s" %s/>' % (x0, Y(v), x1, Y(v), LINE, 'stroke-dasharray="3 4"' if v else ""))
-        out.append('<text x="%d" y="%.1f" fill="%s" font-size="11" text-anchor="end">%s</text>' % (x0 - 10, Y(v) + 4, FAINT, fmt(v)))
+        out.append('<text x="%d" y="%.1f" fill="%s" font-size="10" text-anchor="end">%s</text>' % (x0 - 6, Y(v) + 3.5, FAINT, fmt(v)))
     out.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="%s" stroke-width="1.4" stroke-dasharray="6 5"/>' % (x0, Y(2250), x1, Y(2250), AMBER))
-    out.append('<text x="%d" y="%.1f" fill="%s" font-size="11.5" font-weight="600">库存上限 2,250</text>' % (x0 + 8, Y(2250) - 8, AMBER))
+    out.append('<text x="%d" y="%.1f" fill="%s" font-size="10.5" font-weight="600">库存上限 2,250</text>' % (x0 + 6, Y(2250) - 6, AMBER))
+    label_every = 3 if mobile else 2
     for i, dt in enumerate(dates_ext):
-        if i % 2 == 0 or i >= n - 2:
-            lab = dt[5:].replace("-", "/") + ("（今天）" if dt == today else "")
-            out.append('<text x="%.1f" y="%d" fill="%s" font-size="11" text-anchor="middle">%s</text>' % (X(i), ybot + 22, FAINT, lab))
+        if i % label_every == 0 or i >= n - 2:
+            lab = dt[5:].replace("-", "/") + ("（今）" if dt == today and mobile else ("（今天）" if dt == today else ""))
+            out.append('<text x="%.1f" y="%d" fill="%s" font-size="%.1f" text-anchor="middle">%s</text>' % (X(i), ybot + 20, FAINT, fs - 1.5, lab))
     i_today = dates_ext.index(today)
     out.append('<rect x="%.1f" y="%d" width="%.1f" height="%d" fill="#FDF8E8"/>' % (X(i_today) - step / 2, ytop, x1 - X(i_today) + step / 2, ybot - ytop))
-    out.append('<text x="%.1f" y="%d" fill="#B08400" font-size="11">预测区</text>' % (X(i_today) - step / 2 + 6, ybot - 8))
+    out.append('<text x="%.1f" y="%d" fill="#B08400" font-size="10">预测区</text>' % (X(i_today) - step / 2 + 5, ybot - 6))
     for k in ("10.30", "10.31"):
         col = BLUE if k == "10.30" else ORANGE
         pts = [(X(i), Y(v)) for i, v in enumerate(cum[k])]
         out.append('<path d="M %s" fill="none" stroke="%s" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>' % (" L ".join("%.1f %.1f" % p for p in pts), col))
         lx, ly = pts[-1]
         out.append('<circle cx="%.1f" cy="%.1f" r="4.5" fill="#FFF" stroke="%s" stroke-width="2.5"/>' % (lx, ly, col))
-        out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="12" font-weight="700" text-anchor="end">%s 场 · 已售 %s</text>' % (lx - 8, ly - 12, col, k, fmt(cum[k][-1])))
+        lab = ("%s 已售 %s" % (k, fmt(cum[k][-1]))) if mobile else ("%s 场 · 已售 %s" % (k, fmt(cum[k][-1])))
+        out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="700" text-anchor="end">%s</text>' % (lx - 8, ly - 12, col, fs, lab))
     fc = D["forecast"]
     # 10.31 场预测
     if "10.31" in fc and fc["10.31"]["sellout"]:
@@ -330,8 +343,8 @@ def fig_forecast(D):
         x_start, y_start = X(i_today), Y(cum["10.31"][-1])
         out.append('<path d="M %.1f %.1f L %.1f %.1f" fill="none" stroke="%s" stroke-width="2.2" stroke-dasharray="6 5"/>' % (x_start, y_start, fx, Y(2250), ORANGE))
         out.append('<circle cx="%.1f" cy="%.1f" r="6" fill="%s"/><text x="%.1f" y="%.1f" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>' % (fx, Y(2250), ORANGE, fx, Y(2250) + 3.5))
-        lab = "10.31 场 · 预计 %s 售罄" % hh(h)
-        out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="12" font-weight="700" text-anchor="end">%s</text>' % (fx - 10, Y(2250) - 26, ORANGE, lab))
+        lab = ("10.31场 %s售罄" % hh(h)) if mobile else ("10.31 场 · 预计 %s 售罄" % hh(h))
+        out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="700" text-anchor="end">%s</text>' % (fx - 8, Y(2250) - 22, ORANGE, fs, lab))
     # 10.30 场预测（强/弱场景）
     if "10.30" in fc:
         f30 = fc["10.30"]; x_start, y_start = X(i_today), Y(cum["10.30"][-1])
@@ -339,33 +352,47 @@ def fig_forecast(D):
             fx = X(i_today) + step * min(f30["full_hour"], 24) / 24
             out.append('<path d="M %.1f %.1f L %.1f %.1f" fill="none" stroke="%s" stroke-width="2.2" stroke-dasharray="6 5"/>' % (x_start, y_start, fx, Y(2250), BLUE))
             out.append('<circle cx="%.1f" cy="%.1f" r="6" fill="%s"/><text x="%.1f" y="%.1f" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>' % (fx, Y(2250), BLUE, fx, Y(2250) + 3.5))
-            out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="12" font-weight="700" text-anchor="middle">10.30 场 · 强场景 %s 售罄</text>' % (fx, Y(2250) + 24, BLUE, hh(f30["full_hour"])))
+            lab = ("10.30场 强场景%s" % hh(f30["full_hour"])) if mobile else ("10.30 场 · 强场景 %s 售罄" % hh(f30["full_hour"]))
+            out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="700" text-anchor="middle">%s</text>' % (fx, Y(2250) + 22, BLUE, fs, lab))
         wend = min(cum["10.30"][-1] + f30["weak_today"], f30["weak_final"])
         out.append('<path d="M %.1f %.1f L %.1f %.1f" fill="none" stroke="%s" stroke-width="1.8" stroke-dasharray="2 5" stroke-opacity="0.75"/>' % (x_start, y_start, X(i_today) + step * 0.9, Y(wend), BLUE))
-        out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="11.5">弱场景：收官 ~%s（%.0f%%）</text>' % (X(i_today) + step * 0.95, Y(wend) + 5, BLUE, fmt(wend), wend / 2250 * 100))
+        wlab = "弱场景收官 ~%s（%.0f%%）" % (fmt(wend), wend / 2250 * 100)
+        if mobile:
+            out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="10" text-anchor="end">%s</text>' % (x1 - 2, Y(wend) + 4, BLUE, wlab))
+        else:
+            out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="11.5">%s</text>' % (X(i_today) + step * 0.95, Y(wend) + 5, BLUE, wlab))
     lx = x0
-    out.append('<line x1="%d" y1="16" x2="%d" y2="16" stroke="%s" stroke-width="2.6"/>' % (lx, lx + 22, SUB))
-    out.append('<text x="%d" y="20" fill="%s" font-size="11.5">实际（截至 %s）</text>' % (lx + 30, SUB, D["stamp"][5:]))
+    out.append('<line x1="%d" y1="14" x2="%d" y2="14" stroke="%s" stroke-width="2.6"/>' % (lx, lx + 20, SUB))
+    out.append('<text x="%d" y="18" fill="%s" font-size="10.5">实际（截至 %s）</text>' % (lx + 26, SUB, D["stamp"][5:]))
+    lx += 26 + tw("实际（截至 %s）" % D["stamp"][5:], 10.5) + 18
+    out.append('<line x1="%.0f" y1="14" x2="%.0f" y2="14" stroke="%s" stroke-width="2.2" stroke-dasharray="5 4"/>' % (lx, lx + 20, SUB))
+    out.append('<text x="%.0f" y="18" fill="%s" font-size="10.5">预测</text>' % (lx + 26, SUB))
     out.append("</svg>")
     return "\n".join(out)
 
-def fig_daily(D):
-    W, H = 1132, 250; x0, x1, ytop, ybot = 66, W - 42, 34, 196
+def fig_daily(D, mobile=False):
+    W = 560 if mobile else 1132; H = 250
+    x0 = 42 if mobile else 66; x1 = W - 20; ytop, ybot = 34, 196
+    bw = 18 if mobile else 40
     last7 = D["dates"][-7:]
     ymax = max(400, int(max(D["daily"][n].get(d, 0) for n in ("10.30", "10.31") for d in last7) * 1.2))
     out = ['<svg viewBox="0 0 %d %d" width="100%%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,\'PingFang SC\',Arial,sans-serif">' % (W, H)]
-    for v in range(0, ymax + 1, 100):
+    for v in range(0, ymax + 1, 200 if mobile else 100):
         out.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="%s" %s/>' % (x0, ybot - (ybot - ytop) * v / ymax, x1, ybot - (ybot - ytop) * v / ymax, LINE, 'stroke-dasharray="3 4"' if v else ""))
-        out.append('<text x="%d" y="%.1f" fill="%s" font-size="11" text-anchor="end">%d</text>' % (x0 - 10, ybot - (ybot - ytop) * v / ymax + 4, FAINT, v))
-    slot = (x1 - x0) / len(last7); bw = 40
+        out.append('<text x="%d" y="%.1f" fill="%s" font-size="10" text-anchor="end">%d</text>' % (x0 - 6, ybot - (ybot - ytop) * v / ymax + 3.5, FAINT, v))
+    slot = (x1 - x0) / len(last7)
     for i, dt in enumerate(last7):
         cx = x0 + slot * (i + 0.5)
         for j, k in enumerate(("10.30", "10.31")):
             v = D["daily"][k].get(dt, 0); h = (ybot - ytop) * v / ymax
-            bx = cx - bw - 5 + j * (bw + 10)
+            bx = cx - bw - 3 + j * (bw + 6)
             out.append('<rect x="%.1f" y="%.1f" width="%d" height="%.1f" rx="3" fill="%s" fill-opacity="%s"/>' % (bx, ybot - h, bw, max(h, 1), BLUE if k == "10.30" else ORANGE, "1" if k == "10.31" else "0.45"))
-            out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="10.5" font-weight="600" text-anchor="middle">%s</text>' % (bx + bw / 2, ybot - h - 5, SUB, fmt(v)))
-        out.append('<text x="%.1f" y="%d" fill="%s" font-size="11" text-anchor="middle">%s</text>' % (cx, ybot + 20, FAINT, dt[5:].replace("-", "/")))
+            out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="9.5" font-weight="600" text-anchor="middle">%s</text>' % (bx + bw / 2, ybot - h - 4, SUB, fmt(v)))
+        out.append('<text x="%.1f" y="%d" fill="%s" font-size="10" text-anchor="middle">%s</text>' % (cx, ybot + 18, FAINT, dt[5:].replace("-", "/")))
+    lx = x0
+    for k, txt in (("10.30", "10.30 周五"), ("10.31", "10.31 周六")):
+        out.append('<rect x="%.0f" y="6" width="9" height="9" rx="2" fill="%s" fill-opacity="%s"/>' % (lx, BLUE if k == "10.30" else ORANGE, "1" if k == "10.31" else "0.45"))
+        out.append('<text x="%.0f" y="14" fill="%s" font-size="10.5">%s</text>' % (lx + 14, SUB, txt)); lx += 14 + tw(txt, 10.5) + 18
     out.append("</svg>")
     return "\n".join(out)
 
@@ -450,10 +477,9 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 .mbar { height:6px; border-radius:3px; background:#EDEFF2; overflow:hidden; }
 .mbar span { display:block; height:6px; border-radius:3px; }
 .foot { text-align:center; font-size:11px; color:#B0B7C3; margin-top:6px; }
-/* 响应式：双栏进度图 + 宽图/宽表横滑 */
+/* 响应式：双栏进度图 + 图表桌面/手机双版本切换 */
 .panels { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.figscroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-.figscroll svg { display:block; }
+.only-mobile { display:none; }
 .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .table-wrap table { min-width:640px; }
 @media (max-width:768px) {
@@ -463,8 +489,10 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
   h1 { font-size:18px; line-height:1.4; }
   .subtitle { font-size:11.5px; }
   .panels { grid-template-columns:1fr; }
-  .figscroll svg { min-width:640px; }
+  .only-desktop { display:none; }
+  .only-mobile { display:block; }
   .hint { font-size:11.5px; }
+  .table-wrap table { min-width:600px; }
 }
 """
 
@@ -505,9 +533,10 @@ def render(D):
 <div class="foot">INS LAND · 万圣节票务库存监测 · 生成于 __STAMP__</div></div></body></html>"""
     html = html.replace("__CSS__", CSS).replace("__STAMP__", D["stamp"]).replace("__HINT2__", hint2)
     html = html.replace("__FIG1__", fig_progress(D))
-    html = html.replace("__FIG2__", '<div class="figscroll">%s</div>' % fig_compare(D))
-    html = html.replace("__FIG3__", '<div class="figscroll">%s</div>' % fig_forecast(D))
-    html = html.replace("__FIG4__", '<div class="figscroll">%s</div>' % fig_daily(D))
+    for tag, fn in (("__FIG2__", fig_compare), ("__FIG3__", fig_forecast), ("__FIG4__", fig_daily)):
+        html = html.replace(tag,
+            '<div class="only-desktop">%s</div><div class="only-mobile">%s</div>'
+            % (fn(D), fn(D, mobile=True)))
     html = html.replace("__TABLE__", '<div class="table-wrap">%s</div>' % detail_table(D))
     html = html.replace("__PRED__", '<div class="table-wrap">%s</div>' % pred_table(D))
     return html
