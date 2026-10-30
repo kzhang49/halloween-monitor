@@ -2,9 +2,9 @@ name: Halloween Ticket Monitor
 
 on:
   schedule:
-    # 每小时排两个 cron（GitHub 定时任务高峰期会丢，双保险；脚本内有 40 分钟防重）
+    # 每小时排两个 cron（GitHub 定时任务高峰期会丢，双保险；下方 40 分钟防重保证每小时只推一次）
     - cron: "3,33 * * * *"
-  workflow_dispatch: {}   # 允许手动触发
+  workflow_dispatch: {}   # 允许手动触发（手动触发跳过防重）
 
 permissions:
   contents: write
@@ -19,13 +19,33 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Check last run (40-min dedupe)
+        id: check
+        run: |
+          rm -rf report
+          STAMP=$(curl -s "https://${{ github.repository_owner }}.github.io/halloween-monitor/latest.json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stamp',''))" || true)
+          if [ -n "$STAMP" ]; then
+            AGE=$(python3 -c "
+from datetime import datetime, timedelta
+now = datetime.utcnow() + timedelta(hours=8)
+pt = datetime.strptime('$STAMP', '%Y-%m-%d %H:%M')
+print(int((now - pt).total_seconds() // 60))
+")
+            echo "last run age: ${AGE} min"
+            if [ "$AGE" -lt 40 ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
       - name: Run monitor
+        if: steps.check.outputs.skip != 'true'
         env:
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
           PAGES_URL: https://${{ github.repository_owner }}.github.io/halloween-monitor/
         run: python monitor.py
 
       - name: Publish report to gh-pages
+        if: steps.check.outputs.skip != 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
