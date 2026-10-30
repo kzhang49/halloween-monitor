@@ -240,14 +240,41 @@ function figForecast(D, mobile) {
     out.push(`<text x="${(lx2 - 8).toFixed(1)}" y="${(ly2 - 12).toFixed(1)}" fill="${col}" font-size="${fs}" font-weight="700" text-anchor="end">${lab}</text>`);
   }
   const fc = D.forecast || {};
-  if (iToday >= 0 && fc["10.31"] && fc["10.31"].sellout) {
-    const h = fc["10.31"].full_hour;
-    const fx = X(iToday) + step * Math.min(h, 24) / 24;
+  if (iToday >= 0 && fc["10.31"]) {
+    const f31 = fc["10.31"];
     const xs = X(iToday), ys = Y(cum["10.31"][cum["10.31"].length - 1]);
-    out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${Y(2250).toFixed(1)}" fill="none" stroke="${ORANGE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
-    out.push(`<circle cx="${fx.toFixed(1)}" cy="${Y(2250).toFixed(1)}" r="6" fill="${ORANGE}"/><text x="${fx.toFixed(1)}" y="${(Y(2250) + 3.5).toFixed(1)}" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>`);
-    const lab = mobile ? `10.31场 ${hh(h)}售罄` : `10.31 场 · 预计 ${hh(h)} 售罄`;
-    out.push(`<text x="${(fx - 8).toFixed(1)}" y="${(Y(2250) - 22).toFixed(1)}" fill="${ORANGE}" font-size="${fs}" font-weight="700" text-anchor="end">${lab}</text>`);
+    const drawHit = (fx, lab) => {
+      out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${Y(2250).toFixed(1)}" fill="none" stroke="${ORANGE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
+      out.push(`<circle cx="${fx.toFixed(1)}" cy="${Y(2250).toFixed(1)}" r="6" fill="${ORANGE}"/><text x="${fx.toFixed(1)}" y="${(Y(2250) + 3.5).toFixed(1)}" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>`);
+      out.push(`<text x="${(fx - 8).toFixed(1)}" y="${(Y(2250) - 22).toFixed(1)}" fill="${ORANGE}" font-size="${fs}" font-weight="700" text-anchor="end">${lab}</text>`);
+    };
+    if (f31.sellout) {
+      const h = f31.full_hour;
+      drawHit(X(iToday) + step * Math.min(h, 36) / 24,
+        mobile ? `10.31场 ${hh(h)}售罄` : `10.31 场 · 预计 ${hh(h)} 售罄`);
+    } else if (f31.final_est >= 2250) {
+      // 今日(T-1)卖不完，但需求外推超库存 → 明日(T-0)必售罄，按 T0 分时估明日钟点
+      const soldToday31 = (D.daily["10.31"] || {})[today] || 0;
+      const remAfter = D.nights["10.31"].left - Math.max(f31.inc_today - soldToday31, 0);
+      const tomorrowInc = Math.max(f31.final_est * SAT_T0, 1);
+      if (remAfter <= 0) {
+        drawHit(X(iToday) + step * 0.98, "10.31场 今晚尾声售罄");
+      } else {
+        let hEst = null;
+        for (let ht = 6.0; ht <= 24; ht += 0.25) {
+          if (profileCum(T0_PROFILE, ht) * tomorrowInc >= remAfter) { hEst = ht; break; }
+        }
+        if (hEst === null) drawHit(X(iToday) + step * 1.95, "10.31场 明日售罄");
+        else drawHit(X(iToday) + step * (24 + Math.min(hEst, 22)) / 24,
+          mobile ? `10.31场 明日${String(Math.floor(hEst)).padStart(2, "0")}:00售罄` : `10.31 场 · 预计明日 ${String(Math.floor(hEst)).padStart(2, "0")}:00 前后售罄`);
+      }
+    } else {
+      const fx = X(iToday) + step * 1.5;
+      const fy = Y(Math.min(f31.final_est, ymax));
+      out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${fy.toFixed(1)}" fill="none" stroke="${ORANGE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
+      const lab = mobile ? `10.31场 收官~${fmt(f31.final_est)} 不售罄` : `10.31 场 · 预计收官 ~${fmt(f31.final_est)}（${Math.round(f31.final_est / 2250 * 100)}%），不售罄`;
+      out.push(`<text x="${(fx - 8).toFixed(1)}" y="${(fy - 10).toFixed(1)}" fill="${ORANGE}" font-size="${fs}" font-weight="700" text-anchor="end">${lab}</text>`);
+    }
   }
   if (iToday >= 0 && fc["10.30"]) {
     const f30 = fc["10.30"], xs = X(iToday), ys = Y(cum["10.30"][cum["10.30"].length - 1]);
@@ -257,12 +284,19 @@ function figForecast(D, mobile) {
       out.push(`<circle cx="${fx.toFixed(1)}" cy="${Y(2250).toFixed(1)}" r="6" fill="${BLUE}"/><text x="${fx.toFixed(1)}" y="${(Y(2250) + 3.5).toFixed(1)}" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>`);
       const lab = mobile ? `10.30场 强场景${hh(f30.full_hour)}` : `10.30 场 · 强场景 ${hh(f30.full_hour)} 售罄`;
       out.push(`<text x="${fx.toFixed(1)}" y="${(Y(2250) + 22).toFixed(1)}" fill="${BLUE}" font-size="${fs}" font-weight="700" text-anchor="middle">${lab}</text>`);
+    } else {
+      const send_ = Math.min(f30.strong_final, 2250);
+      const fx = X(iToday) + step * 0.9;
+      out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${Y(send_).toFixed(1)}" fill="none" stroke="${BLUE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
+      const slab = `强场景收官 ~${fmt(send_)}（${Math.round(send_ / 2250 * 100)}%）`;
+      if (mobile) out.push(`<text x="${x1 - 2}" y="${(Y(send_) - 8).toFixed(1)}" fill="${BLUE}" font-size="10" text-anchor="end">${slab}</text>`);
+      else out.push(`<text x="${(X(iToday) + step * 0.95).toFixed(1)}" y="${(Y(send_) - 8).toFixed(1)}" fill="${BLUE}" font-size="11.5" font-weight="600">${slab}</text>`);
     }
     const wend = Math.min(cum["10.30"][cum["10.30"].length - 1] + f30.weak_today, f30.weak_final);
     out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${(X(iToday) + step * 0.9).toFixed(1)} ${Y(wend).toFixed(1)}" fill="none" stroke="${BLUE}" stroke-width="1.8" stroke-dasharray="2 5" stroke-opacity="0.75"/>`);
     const wlab = `弱场景收官 ~${fmt(wend)}（${Math.round(wend / 2250 * 100)}%）`;
-    if (mobile) out.push(`<text x="${x1 - 2}" y="${(Y(wend) + 4).toFixed(1)}" fill="${BLUE}" font-size="10" text-anchor="end">${wlab}</text>`);
-    else out.push(`<text x="${(X(iToday) + step * 0.95).toFixed(1)}" y="${(Y(wend) + 5).toFixed(1)}" fill="${BLUE}" font-size="11.5">${wlab}</text>`);
+    if (mobile) out.push(`<text x="${x1 - 2}" y="${(Y(wend) + 12).toFixed(1)}" fill="${BLUE}" font-size="10" text-anchor="end">${wlab}</text>`);
+    else out.push(`<text x="${(X(iToday) + step * 0.95).toFixed(1)}" y="${(Y(wend) + 14).toFixed(1)}" fill="${BLUE}" font-size="11.5">${wlab}</text>`);
   }
   let lx = x0;
   out.push(`<line x1="${lx}" y1="14" x2="${lx + 20}" y2="14" stroke="${SUB}" stroke-width="2.6"/>`);

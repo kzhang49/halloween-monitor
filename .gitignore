@@ -1,3 +1,4 @@
 report/
 __pycache__/
 .env
+.cf.env
