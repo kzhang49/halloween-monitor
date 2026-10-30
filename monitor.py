@@ -8,7 +8,7 @@
 - 销售窗口：场次票仅在当天售卖并延续至自然日次日0点后（sale_dt 次日计入该场 T-0）
 - 产出：report/index.html = 完整版看板（与本地版同结构）→ GitHub Pages；飞书卡片 = 告警+入口
 """
-import json, os, datetime, collections, urllib.request
+import json, os, datetime, collections, urllib.request, base64
 
 BASE = "https://kanban.mmweb.top"
 DATASET = 53
@@ -116,14 +116,80 @@ def fetch_prev(pages_url):
     except Exception as e:
         print("prev fetch failed:", e); return None
 
+# ---------------- GitHub Pages 发布（本地直发，替代 Actions） ----------------
+def gh_put(path, content_str, message):
+    """把文件写到 gh-pages 分支（需要 GH_TOKEN，细粒度 PAT: 仅本仓 Contents RW）"""
+    token = os.environ.get("GH_TOKEN", "").strip()
+    if not token:
+        print("no GH_TOKEN, skip publish:", path); return False
+    repo = os.environ.get("GH_REPO", "kzhang49/halloween-monitor")
+    headers = {"Authorization": "Bearer " + token, "Accept": "application/vnd.github+json",
+               "User-Agent": "halloween-monitor-local"}
+    # 取当前 sha（存在则覆盖）
+    sha = None
+    req = urllib.request.Request("https://api.github.com/repos/%s/contents/%s?ref=gh-pages" % (repo, path),
+                                 headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            sha = json.load(r).get("sha")
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            print("gh get sha failed:", e.code); return False
+    body = {"message": message, "branch": "gh-pages",
+            "content": base64.b64encode(content_str.encode("utf-8")).decode()}
+    if sha: body["sha"] = sha
+    req = urllib.request.Request("https://api.github.com/repos/%s/contents/%s" % (repo, path),
+                                 data=json.dumps(body).encode(), headers=headers, method="PUT")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            print("gh put %s: %d" % (path, r.status)); return True
+    except urllib.error.HTTPError as e:
+        print("gh put %s failed: %d %s" % (path, e.code, e.read()[:200])); return False
+
 # ---------------- 主流程 ----------------
+def _load_dotenv():
+    """从脚本旁的 .env 补齐缺失的环境变量（cron 场景下 launchd/crontab 不便修改时用）"""
+    try:
+        envp = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+        for line in open(envp):
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+    except Exception:
+        pass
+
+
 def main():
+    _load_dotenv()
     now = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
     today = now.date().isoformat()
     stamp = now.strftime("%Y-%m-%d %H:%M")
     pages_url = os.environ.get("PAGES_URL", "").strip()
 
-    prev = fetch_prev(pages_url) if pages_url else None
+    prev_pages = fetch_prev(pages_url) if pages_url else None
+    # 上一轮数据取 Pages 与本地 report/latest.json 中较新者（本地 cron 兜底时增量才准确）
+    cands = []
+    for p in (prev_pages,):
+        if p and p.get("stamp"): cands.append(p)
+    try:
+        lp = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "report", "latest.json")))
+        if lp.get("stamp"): cands.append(lp)
+    except Exception:
+        lp = None
+    def _key(p):
+        try: return datetime.datetime.strptime(p["stamp"], "%Y-%m-%d %H:%M")
+        except Exception: return datetime.datetime.min
+    prev = max(cands, key=_key) if cands else None
+    # 防重复：任一来源 <40 分钟则跳过（FORCE=1 强制）
+    if not os.environ.get("FORCE"):
+        for p in cands:
+            try:
+                age = (now - _key(p)).total_seconds() / 60
+                if age < 40:
+                    print("skip: last run %.0f min ago (%s)" % (age, p["stamp"])); return
+            except Exception:
+                pass
     agg, daily = load_data()
 
     D = {"stamp": stamp, "today": today, "nights": {}, "deltas": {},
@@ -218,8 +284,14 @@ def main():
     D["forecast"] = fc
 
     os.makedirs("report", exist_ok=True)
-    json.dump(D, open("report/latest.json", "w"), ensure_ascii=False, indent=1, default=str)
-    open("report/index.html", "w", encoding="utf-8").write(render(D))
+    latest_str = json.dumps(D, ensure_ascii=False, indent=1, default=str)
+    open("report/latest.json", "w", encoding="utf-8").write(latest_str)
+    html_str = render(D)
+    open("report/index.html", "w", encoding="utf-8").write(html_str)
+    # 直接发布到 gh-pages（外发链接 kzhang49.github.io/halloween-monitor/ 保持最新）
+    if os.environ.get("GH_TOKEN"):
+        gh_put("index.html", html_str, "report " + stamp)
+        gh_put("latest.json", latest_str, "data " + stamp)
     send_feishu(D)
 
 # ---------------- SVG 图 ----------------
