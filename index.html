@@ -43,7 +43,7 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 }
 </style></head><body><div class="container">
 <div class="card"><h1>万圣节库存消耗进度 · 10.30（周五）vs 10.31（周六 · 万圣夜）</h1>
-<div class="subtitle">数据截至 <b>2026-10-31 06:11</b>（每小时自动更新）｜ 来源：Superset 看板 27【实时】散客票务监测 ｜ 口径：<b>支付成功票数 ÷ 单日库存</b>（超早 300 / 早场 900 / 正价 1,050，每晚独立）｜ 已剔除 City Drink、限时参团、员工福利场次票；<b>嘉年华会员专属并入正价票</b>；场次销售延续至自然日次日 0 点后（计入该场）</div></div>
+<div class="subtitle">数据截至 <b>2026-10-31 07:11</b>（每小时自动更新）｜ 来源：Superset 看板 27【实时】散客票务监测 ｜ 口径：<b>支付成功票数 ÷ 单日库存</b>（超早 300 / 早场 900 / 正价 1,050，每晚独立）｜ 已剔除 City Drink、限时参团、员工福利场次票；<b>嘉年华会员专属并入正价票</b>；场次销售延续至自然日次日 0 点后（计入该场）</div></div>
 <div class="card"><h2>① 分晚 · 各票型库存消耗进度<span>条内数字 = 已售 / 库存</span></h2>
 <div class="hint">左右两栏为 10.30 与 10.31 两个独立场次；末行「2 点前三票型合计」对应每晚 2,250 张的 2 点前库存池。</div><div class="panels"><div class="panel"><svg viewBox="0 0 548 612" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
 <rect x="0" y="0" width="548" height="612" rx="12" fill="#F7F8FA"/>
@@ -163,7 +163,7 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <circle cx="929.2" cy="72.3" r="6" fill="#E8543F"/><text x="929.2" y="75.8" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>
 <text x="921.2" y="50.3" fill="#E8543F" font-size="12" font-weight="700" text-anchor="end">10.31 场 · 预计 18:00 前后 售罄</text>
 <line x1="70" y1="14" x2="90" y2="14" stroke="#5A6270" stroke-width="2.6"/>
-<text x="96" y="18" fill="#5A6270" font-size="10.5">实际（截至 10-31 06:11）</text>
+<text x="96" y="18" fill="#5A6270" font-size="10.5">实际（截至 10-31 07:11）</text>
 <line x1="241" y1="14" x2="261" y2="14" stroke="#5A6270" stroke-width="2.2" stroke-dasharray="5 4"/>
 <text x="267" y="18" fill="#5A6270" font-size="10.5">预测</text>
 </svg></div><div class="only-mobile"><svg viewBox="0 0 560 400" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
@@ -199,7 +199,7 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <circle cx="536.6" cy="82.6" r="6" fill="#E8543F"/><text x="536.6" y="86.1" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>
 <text x="528.6" y="60.6" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="end">10.31场 18:00 前后售罄</text>
 <line x1="44" y1="14" x2="64" y2="14" stroke="#5A6270" stroke-width="2.6"/>
-<text x="70" y="18" fill="#5A6270" font-size="10.5">实际（截至 10-31 06:11）</text>
+<text x="70" y="18" fill="#5A6270" font-size="10.5">实际（截至 10-31 07:11）</text>
 <line x1="215" y1="14" x2="235" y2="14" stroke="#5A6270" stroke-width="2.2" stroke-dasharray="5 4"/>
 <text x="241" y="18" fill="#5A6270" font-size="10.5">预测</text>
 </svg></div><div class="table-wrap"><table class="predt"><thead><tr><th>场次</th><th>票型</th><th class="num">当前余量</th><th>预计售罄时间</th><th>置信度</th><th>判断依据</th></tr></thead><tbody><tr><td class='psess'>10.31 万圣夜</td><td><b>超级早鸟</b></td><td class='num'>0</td><td>已售罄</td><td><span class='conf' style='color:#98A2B3;background:#98A2B314'>—</span></td><td class='why'>退票回流是唯一余量来源</td></tr>
@@ -428,4 +428,4 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <b>④ 销售窗口</b>：场次票仅在当天售卖，并延续至自然日次日 0 点后（sale_dt 次日计入该场 T-0）；超早 21:00 / 早场 22:00 停售（预测中到点未罄标记为「停售」，需求顺延至下一票型）；10.30 场晚场票 10.31 凌晨 2 点起售、不限量、不计入合计。<br>
 <b>⑤ 预测模型</b>：9/29–10/29 共 13 个已结束场次的分销售日累计占比经验外推（普通周五当天 71%–76%；普通周六 T-1 ~31% / T-0 ~29%）；含票型溢出顺移与当天分时曲线。<br>
 <b>⑥ 数据源</b>：Superset 看板 27，数据集 53，看板缓存 5 分钟；本页每小时自动生成（Cloudflare Worker）。</div></div>
-<div class="foot">INS LAND · 万圣节票务库存监测 · 生成于 2026-10-31 06:11</div></div></body></html>
+<div class="foot">INS LAND · 万圣节票务库存监测 · 生成于 2026-10-31 07:11</div></div></body></html>
