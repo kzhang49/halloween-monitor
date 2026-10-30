@@ -6,6 +6,8 @@ const DATASET = 53;
 const STOCK = { "超早": 300, "早场": 900, "正价": 1050 };
 const TICKET_MAP = { "超级早鸟票": "超早", "早场票": "早场", "正价票": "正价", "嘉年华会员专属": "正价" };
 const NIGHTS_TS = { 1793390400000: "10.30", 1793476800000: "10.31" };
+const LATE_START_MS = Date.UTC(2026, 9, 30, 18, 0);   // 10.30 场晚场票 10.31 02:00(北京) 起售（不限量，不计入合计）
+const CUTOFF = { "超早": 21, "早场": 22, "正价": 99 }; // 停售时点：超早 21:00 / 早场 22:00（正价不限）
 const FRI_T0 = 0.74, HOLIDAY_T0 = 0.615, SAT_T1 = 0.31, SAT_T0 = 0.29;
 const T0_PROFILE = { 9: .04, 10: .05, 11: .06, 12: .07, 13: .08, 14: .09, 15: .09, 16: .09, 17: .08, 18: .08, 19: .07, 20: .07, 21: .06, 22: .04, 23: .02, 24: .01 };
 const T1_PROFILE = { 9: .03, 10: .05, 11: .06, 12: .08, 13: .09, 14: .10, 15: .10, 16: .10, 17: .09, 18: .08, 19: .07, 20: .06, 21: .04, 22: .03, 23: .01, 24: .01 };
@@ -60,9 +62,18 @@ async function loadData() {
   const dailyRows = await fetchRows(["sale_dt", "times_time", "ticket_name"], ["success_ticket_num"],
     [{ col: "times_time", op: "TEMPORAL_RANGE", val: "2026-10-30 : 2026-11-01" }]);
   const agg = {};
+  const late = { order: 0, paid: 0, refund: 0 };   // 10.30 场晚场票（不限量，单列，不进合计）
   for (const r of aggRows) {
-    const night = NIGHTS_TS[r.times_time], t = TICKET_MAP[r.ticket_name];
-    if (!night || !t) continue;
+    const night = NIGHTS_TS[r.times_time];
+    if (!night) continue;
+    if (night === "10.30" && (r.ticket_name || "").includes("晚场")) {
+      late.order += r.order_ticket_num || 0;
+      late.paid += r.success_ticket_num || 0;
+      late.refund += r.refund_success_ticket_num || 0;
+      continue;
+    }
+    const t = TICKET_MAP[r.ticket_name];
+    if (!t) continue;
     const k = night + "|" + t;
     if (!agg[k]) agg[k] = { order: 0, paid: 0, refund: 0 };
     agg[k].order += r.order_ticket_num || 0;
@@ -76,7 +87,7 @@ async function loadData() {
     const d = tsToIso(r.sale_dt);
     daily[night][d] = (daily[night][d] || 0) + (r.success_ticket_num || 0);
   }
-  return { agg, daily };
+  return { agg, daily, late };
 }
 
 // ---------- 售罄钟点估计 ----------
@@ -91,14 +102,18 @@ function hourOf(needed, dayTotal, todaySold, profile) {
 }
 function hh(h) {
   if (h === null || h === undefined) return "已售罄";
+  if (h < 0) return String(-h).padStart(2, "0") + ":00 停售";   // 到停售点仍未罄（超早21:00/早场22:00），需求顺延下一票型
   if (h >= 99) return "当天售不完";
   return (h >= 24 ? "次日" : "") + String(h % 24).padStart(2, "0") + ":00 前后";
 }
-function cascade(lefts, dayTotal, todaySold, profile) {
+function cascade(lefts, dayTotal, todaySold, profile, cutoffs) {
+  cutoffs = cutoffs || CUTOFF;
   const out = {}; let need = 0;
   for (const t of ["超早", "早场", "正价"]) {
     need += Math.max(lefts[t] || 0, 0);
-    out[t] = (lefts[t] || 0) > 0 ? hourOf(need, dayTotal, todaySold, profile) : null;
+    let h = (lefts[t] || 0) > 0 ? hourOf(need, dayTotal, todaySold, profile) : null;
+    if (h !== null && h > 0 && h < 99 && h > (cutoffs[t] || 99)) h = -cutoffs[t];
+    out[t] = h;
   }
   return out;
 }
@@ -117,11 +132,13 @@ async function fetchPrev(pagesUrl) {
 
 // ---------- SVG 图 ----------
 function figProgress(D) {
-  const H = 566, PW = 548;
+  const PW = 548;
   const label = { "10.30": "10.30 周五", "10.31": "10.31 周六 · 万圣夜" };
   const names = { "超早": ["超级早鸟票", "428 RMB"], "早场": ["早场票", "458 RMB"], "正价": ["正价票（含嘉年华会员）", "488 RMB"] };
   const panels = [];
   for (const k of ["10.30", "10.31"]) {
+    const showLate = k === "10.30" && D.late30 && D.late30.show;
+    const H = 566 + (showLate ? 46 : 0);
     const x = 0, out = [];
     out.push(`<svg viewBox="0 0 ${PW} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">`);
     const n = D.nights[k], col = k === "10.30" ? BLUE : ORANGE;
@@ -157,6 +174,14 @@ function figProgress(D) {
     out.push(`<rect x="${x + 22}" y="${by2}" width="${(barw * trate / 100).toFixed(1)}" height="26" rx="6" fill="${GREEN}"/>`);
     const lab2 = `${fmt(n.paid)}/2,250`, fw2 = barw * trate / 100;
     out.push(`<text x="${fw2 > 78 ? x + 32 : (x + 22 + fw2 + 9).toFixed(1)}" y="${by2 + 18}" fill="${fw2 > 78 ? "#FFF" : INK}" font-size="12.5" font-weight="600">${lab2}</text>`);
+    if (showLate) {
+      const la = D.late30, ly = by2 + 52;
+      out.push(`<line x1="${x + 22}" y1="${ly - 12}" x2="${x + PW - 22}" y2="${ly - 12}" stroke="#DDE1E7" stroke-dasharray="3 4"/>`);
+      out.push(`<text x="${x + 22}" y="${ly + 4}" fill="${INK}" font-size="15" font-weight="600">🌙 晚场票</text>`);
+      out.push(`<text x="${x + 22 + tw("🌙 晚场票", 15, true) + 10}" y="${ly + 4}" fill="${FAINT}" font-size="11.5">10.31 凌晨 2 点起售 · 不限量 · 不计入合计</text>`);
+      out.push(`<text x="${x + PW - 22}" y="${ly + 6}" fill="${BLUE}" font-size="21" font-weight="700" text-anchor="end">${fmt(la.paid)} 张</text>`);
+      out.push(`<text x="${x + PW - 22}" y="${ly + 26}" fill="${SUB}" font-size="11.5" text-anchor="end">已售（2:00 起售，无库存上限）</text>`);
+    }
     out.push("</svg>");
     panels.push(out.join("\n"));
   }
@@ -354,7 +379,7 @@ function predTable(D) {
       if (p.left <= 0) entries.push(["10.31 万圣夜", cn, "0", "已售罄", "—", "退票回流是唯一余量来源"]);
       else {
         const h = f.hours[t];
-        entries.push(["10.31 万圣夜", cn, fmt(p.left), hh(h), (h && h < 99) ? "高" : "中",
+        entries.push(["10.31 万圣夜", cn, fmt(p.left), hh(h), (h && h > 0 && h < 99) ? "高" : "中",
           `按 T-1 需求 ${Math.round(f.inc_today)} 张 + 溢出顺移（超早→早场→正价）`]);
       }
     }
@@ -402,6 +427,10 @@ function detailTable(D) {
     const so = ["超早", "早场", "正价"].reduce((s, t) => s + n.per[t].order, 0);
     const sr = ["超早", "早场", "正价"].reduce((s, t) => s + n.per[t].refund, 0);
     rows.push(`<tr class='tot'><td>${k}</td><td>2 点前三票型合计</td><td class='num'>2,250</td><td class='num strong'>${fmt(n.paid)}</td><td class='num'>${fmt(n.left)}</td><td class='pctcell'><b style='color:${GREEN}'>${f1(n.pct)}%</b><div class='mbar'><span style='width:${f1(Math.min(n.pct, 100))}%;background:${GREEN}'></span></div></td><td class='num'>${fmt(so)}</td><td class='num'>${fmt(sr)}</td><td class='num'>${f1(pct(sr, so))}%</td></tr>`);
+    if (k === "10.30" && D.late30 && D.late30.show) {
+      const la = D.late30;
+      rows.push(`<tr><td></td><td>🌙 晚场票（不限量）</td><td class='num'>不限量</td><td class='num strong'>${fmt(la.paid)}</td><td class='num'>—</td><td class='pctcell'><b style='color:${BLUE}'>—</b><div class='mbar'><span style='width:0%'></span></div></td><td class='num'>${fmt(la.order)}</td><td class='num'>${fmt(la.refund)}</td><td class='num'>${f1(pct(la.refund, la.order))}%</td></tr>`);
+    }
   }
   return `<table><thead><tr><th>场次</th><th>票型</th><th class="num">库存</th><th class="num">已售</th><th class="num">待售</th><th>库存消耗进度</th><th class="num">下单</th><th class="num">退款</th><th class="num">退款率</th></tr></thead><tbody>${rows.join("\n")}</tbody></table>`;
 }
@@ -478,7 +507,7 @@ function render(D) {
 <b>① 库存</b>：超早 300 / 早场 900 / 正价 1,050，每晚独立。<br>
 <b>② 已售</b>：支付成功票数（order_status=2，已扣退款），反映库存占用而非到场。<br>
 <b>③ 票型归并</b>：嘉年华会员专属并入正价；剔除 City Drink、限时参团、员工福利场次票。<br>
-<b>④ 销售窗口</b>：场次票仅在当天售卖，并延续至自然日次日 0 点后（sale_dt 次日计入该场 T-0）。<br>
+<b>④ 销售窗口</b>：场次票仅在当天售卖，并延续至自然日次日 0 点后（sale_dt 次日计入该场 T-0）；超早 21:00 / 早场 22:00 停售（预测中到点未罄标记为「停售」，需求顺延至下一票型）；10.30 场晚场票 10.31 凌晨 2 点起售、不限量、不计入合计。<br>
 <b>⑤ 预测模型</b>：9/29–10/29 共 13 个已结束场次的分销售日累计占比经验外推（普通周五当天 71%–76%；普通周六 T-1 ~31% / T-0 ~29%）；含票型溢出顺移与当天分时曲线。<br>
 <b>⑥ 数据源</b>：Superset 看板 27，数据集 53，看板缓存 5 分钟；本页每小时自动生成（Cloudflare Worker）。</div></div>
 <div class="foot">INS LAND · 万圣节票务库存监测 · 生成于 __STAMP__</div></div></body></html>`;
@@ -510,6 +539,10 @@ async function sendFeishu(env, D) {
       lines.push(`　· ${t}：${fmt(p.paid)}/${fmt(p.stock)}（${f1(p.pct)}%）${tag}${d1}`);
       if (p.left > 0 && p.left <= 250) alerts.push(`${k} ${t} 仅剩 ${fmt(p.left)} 张`);
     }
+    if (k === "10.30" && D.late30 && D.late30.show) {
+      const la = D.late30, d1 = la.delta ? `（+${fmt(la.delta)}）` : "";
+      lines.push(`　· 🌙 晚场票（不限量）：已售 ${fmt(la.paid)} 张${d1}`);
+    }
     const f = (D.forecast || {})[k];
     if (f) {
       const hs = f.hours || {};
@@ -518,7 +551,7 @@ async function sendFeishu(env, D) {
         if (f.sellout) {
           lines.push(`　📈 预测：${hh(f.full_hour)} 全场售罄（${seg}）`);
         } else {
-          const soldSeg = ["超早", "早场", "正价"].filter(t => n.per[t].left > 0 && hs[t] && hs[t] < 99).map(t => `${t} ${hh(hs[t])} 售罄`).join("、");
+          const soldSeg = ["超早", "早场", "正价"].filter(t => n.per[t].left > 0 && hs[t] && hs[t] > 0 && hs[t] < 99).map(t => `${t} ${hh(hs[t])} 售罄`).join("、");
           const tail = soldSeg ? "；" + soldSeg : "";
           lines.push(`　📈 预测：按当前卖速收官 ~${fmt(f.final_est)}（${Math.round(f.final_est / 2250 * 100)}%）预计不售罄${tail}`);
         }
@@ -539,7 +572,9 @@ async function sendFeishu(env, D) {
     const bust = pages.replace(/\/$/, "") + "/?v=202610301004";
     elements.push({ tag: "action", actions: [{ tag: "button", text: { tag: "plain_text", content: "📊 打开完整看板（含预测曲线）" }, url: bust, type: "primary" }] });
   }
-  elements.push({ tag: "note", elements: [{ tag: "plain_text", content: "已售=支付成功(扣退款)；嘉年华会员并入正价；不含City Drink/参团/员工票；销售延续至次日0点后" }] });
+  let note = "已售=支付成功(扣退款)；嘉年华会员并入正价；不含City Drink/参团/员工票；销售延续至次日0点后；超早21:00/早场22:00停售";
+  if (D.late30 && D.late30.show) note += "；晚场票不限量单列、不计入合计";
+  elements.push({ tag: "note", elements: [{ tag: "plain_text", content: note }] });
   const card = { msg_type: "interactive", card: { header: { title: { tag: "plain_text", content: "🎃 万圣节库存监控 · " + D.stamp }, template: alerts.length ? "red" : "orange" }, elements } };
   const r = await fetch(hook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(card) });
   return r.status;
@@ -575,8 +610,13 @@ async function run(env, force) {
     const age = (Date.now() - parseStamp(prev.stamp)) / 60000;
     if (age < 40) return { skipped: true, age };
   }
-  const { agg, daily } = await loadData();
+  const { agg, daily, late } = await loadData();
   const D = { stamp, today, nights: {}, deltas: {}, daily };
+  // 10.30 场晚场票：10.31 凌晨 2 点起售，不限量，单列展示、不进 2,250 合计
+  const prevLate = (prev && prev.late30) || {};
+  D.late30 = { paid: late.paid, order: late.order, refund: late.refund,
+    show: Date.now() >= LATE_START_MS,
+    delta: prevLate.paid !== undefined ? late.paid - prevLate.paid : 0 };
   for (const night of ["10.30", "10.31"]) {
     const per = {};
     for (const t of ["超早", "早场", "正价"]) {
