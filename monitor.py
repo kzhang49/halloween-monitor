@@ -651,7 +651,7 @@ def send_feishu(D):
     if alerts: text = "🚨 " + "；".join(alerts) + "\n\n" + text
     elements = [{"tag": "markdown", "content": text}]
     if pages:
-        bust = pages.rstrip("/") + "/?v=" + D["stamp"].replace("-", "").replace(" ", "").replace(":", "")
+        bust = pages.rstrip("/") + "/?v=202610301004"   # 固定外发链接（该URL持续更新；页面内有no-cache+每小时自动刷新）
         elements.append({"tag": "action", "actions": [{"tag": "button", "text": {"tag": "plain_text", "content": "📊 打开完整看板（含预测曲线）"}, "url": bust, "type": "primary"}]})
     elements.append({"tag": "note", "elements": [{"tag": "plain_text", "content": "已售=支付成功(扣退款)；嘉年华会员并入正价；不含City Drink/参团/员工票；销售延续至次日0点后"}]})
     card = {"msg_type": "interactive", "card": {"header": {"title": {"tag": "plain_text", "content": "🎃 万圣节库存监控 · " + D["stamp"]}, "template": "red" if alerts else "orange"}, "elements": elements}}
