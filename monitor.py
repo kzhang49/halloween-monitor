@@ -124,15 +124,6 @@ def main():
     pages_url = os.environ.get("PAGES_URL", "").strip()
 
     prev = fetch_prev(pages_url) if pages_url else None
-    # 防重复：上一轮距今 <40 分钟则跳过（每小时排了 2 个 cron 防 GitHub 丢任务）
-    if prev and prev.get("stamp"):
-        try:
-            pt = datetime.datetime.strptime(prev["stamp"], "%Y-%m-%d %H:%M")
-            age_min = (now - pt).total_seconds() / 60
-            if age_min < 40 and not os.environ.get("FORCE"):
-                print("skip: last run %.0f min ago" % age_min); return
-        except Exception:
-            pass
     agg, daily = load_data()
 
     D = {"stamp": stamp, "today": today, "nights": {}, "deltas": {},
