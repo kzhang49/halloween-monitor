@@ -17,6 +17,8 @@ TICKET_MAP = {"超级早鸟票": "超早", "早场票": "早场", "正价票": "
 NIGHTS_TS = {1793390400000: "10.30", 1793476800000: "10.31"}
 LATE_START = datetime.datetime(2026, 10, 31, 2, 0)   # 10.30 场晚场票 10.31 凌晨 2 点起售（不限量，不计入合计）
 CUTOFF = {"超早": 21, "早场": 22, "正价": 99}        # 停售时点：超早 21:00 / 早场 22:00（正价不限）
+SINGLE_DATASET = 55                                  # 单店票数据集（看板27【实时】单店票售卖情况总览）
+SINGLE_EXCLUDE = ("HERO DOME", "SOUL HOUSE by INS新乐园", "复兴公园游乐场")   # 单店票剔除门店
 EVENT_DATE = {"10.30": datetime.date(2026, 10, 30), "10.31": datetime.date(2026, 10, 31)}
 # 历史规律参数（9/29-10/29 共13个已结束场次验证）
 FRI_T0 = 0.74        # 普通周五当天购买占比（范围 0.71-0.76）
@@ -39,8 +41,8 @@ def post_json(url, payload, referer=None):
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.load(r)
 
-def fetch(cols, metrics, filters):
-    q = {"datasource": {"id": DATASET, "type": "table"}, "force": False,
+def fetch(cols, metrics, filters, dataset=DATASET):
+    q = {"datasource": {"id": dataset, "type": "table"}, "force": False,
          "queries": [{"columns": cols, "metrics": metrics, "filters": filters,
                       "row_limit": 5000, "order_desc": False}],
          "result_format": "json", "result_type": "full"}
@@ -67,11 +69,11 @@ def load_data():
         [{"col": "times_time", "op": "TEMPORAL_RANGE", "val": "2026-10-30 : 2026-11-01"}])
 
     agg = collections.defaultdict(lambda: {"order": 0, "paid": 0, "refund": 0})
-    late = {"order": 0, "paid": 0, "refund": 0}   # 10.30 场晚场票（不限量，单列，不进合计）
+    late = {"order": 0, "paid": 0, "refund": 0}   # 晚场票（不限量，单列展示在 10.31 场，不进合计）
     for r in agg_rows:
         night = NIGHTS_TS.get(r["times_time"])
         if not night: continue
-        if night == "10.30" and "晚场" in (r["ticket_name"] or ""):
+        if "晚场" in (r["ticket_name"] or ""):
             late["order"] += r["order_ticket_num"] or 0
             late["paid"] += r["success_ticket_num"] or 0
             late["refund"] += r["refund_success_ticket_num"] or 0
@@ -88,7 +90,17 @@ def load_data():
         night = NIGHTS_TS.get(r["times_time"])
         if not night or r["ticket_name"] not in TICKET_MAP: continue
         daily[night][conv_date(r["sale_dt"]).isoformat()] += r["success_ticket_num"] or 0
-    return agg, daily, late
+
+    # 10.31 单店票（数据集55，按门店；剔除 HERO DOME / SOUL HOUSE / 复兴公园游乐场）
+    single_rows = fetch(["merchant_name"], ["success_ticket_num"],
+        [{"col": "times_time", "op": "TEMPORAL_RANGE", "val": "2026-10-31 : 2026-11-01"}],
+        dataset=SINGLE_DATASET)
+    single = {}
+    for r in single_rows:
+        m = r["merchant_name"]
+        if not m or m in SINGLE_EXCLUDE: continue
+        single[m] = single.get(m, 0) + (r["success_ticket_num"] or 0)
+    return agg, daily, late, single
 
 # ---------------- 售罄钟点估计 ----------------
 def hour_of(needed, day_total, today_sold, profile):
@@ -205,15 +217,22 @@ def main():
                     print("skip: last run %.0f min ago (%s)" % (age, p["stamp"])); return
             except Exception:
                 pass
-    agg, daily, late = load_data()
+    agg, daily, late, single = load_data()
 
     D = {"stamp": stamp, "today": today, "nights": {}, "deltas": {},
          "daily": {n: dict(daily[n]) for n in ("10.30", "10.31")}}
-    # 10.30 场晚场票：10.31 凌晨 2 点起售，不限量，单列展示、不进 2,250 合计
+    # 晚场票：不限量，单列展示在 10.31 场、不进 2,250 合计（常显，以防早开）
     prev_late = (prev or {}).get("late30") or {}
     D["late30"] = {"paid": late["paid"], "order": late["order"], "refund": late["refund"],
-                   "show": now >= LATE_START,
+                   "show": True,
                    "delta": late["paid"] - prev_late.get("paid", 0) if prev_late else 0}
+    # 10.31 单店票（按门店，剔除指定三店）
+    prev_single = (prev or {}).get("single31") or {}
+    single_total = sum(single.values())
+    prev_per = prev_single.get("per") or {}
+    D["single31"] = {"total": single_total, "per": single,
+                     "delta": single_total - prev_single.get("total", 0) if prev_single else 0,
+                     "per_delta": {m: v - prev_per.get(m, 0) for m, v in single.items()}}
     for night in ("10.30", "10.31"):
         per = {}
         for t in ("超早", "早场", "正价"):
@@ -322,7 +341,7 @@ def fig_progress(D):
     names = {"超早": ("超级早鸟票", "428 RMB"), "早场": ("早场票", "458 RMB"), "正价": ("正价票（含嘉年华会员）", "488 RMB")}
     panels = []
     for k, x in (("10.30", 0), ("10.31", 0)):
-        show_late = k == "10.30" and D.get("late30", {}).get("show")
+        show_late = k == "10.31" and D.get("late30", {}).get("show")
         H = 566 + (46 if show_late else 0)
         out = ['<svg viewBox="0 0 %d %d" width="100%%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,\'PingFang SC\',Arial,sans-serif">' % (PW, H)]
         n = D["nights"][k]; col = BLUE if k == "10.30" else ORANGE
@@ -362,9 +381,9 @@ def fig_progress(D):
             ly = by_ + 52
             out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="#DDE1E7" stroke-dasharray="3 4"/>' % (x + 22, ly - 12, x + PW - 22, ly - 12))
             out.append('<text x="%d" y="%d" fill="%s" font-size="15" font-weight="600">🌙 晚场票</text>' % (x + 22, ly + 4, INK))
-            out.append('<text x="%d" y="%d" fill="%s" font-size="11.5">10.31 凌晨 2 点起售 · 不限量 · 不计入合计</text>' % (x + 22 + tw("🌙 晚场票", 15, True) + 10, ly + 4, FAINT))
-            out.append('<text x="%d" y="%d" fill="%s" font-size="21" font-weight="700" text-anchor="end">%s 张</text>' % (x + PW - 22, ly + 6, BLUE, fmt(la["paid"])))
-            out.append('<text x="%d" y="%d" fill="%s" font-size="11.5" text-anchor="end">已售（2:00 起售，无库存上限）</text>' % (x + PW - 22, ly + 26, SUB))
+            out.append('<text x="%d" y="%d" fill="%s" font-size="11.5">凌晨 2 点起售 · 不限量 · 不计入合计</text>' % (x + 22 + tw("🌙 晚场票", 15, True) + 10, ly + 4, FAINT))
+            out.append('<text x="%d" y="%d" fill="%s" font-size="21" font-weight="700" text-anchor="end">%s 张</text>' % (x + PW - 22, ly + 6, ORANGE, fmt(la["paid"])))
+            out.append('<text x="%d" y="%d" fill="%s" font-size="11.5" text-anchor="end">已售（无库存上限）</text>' % (x + PW - 22, ly + 26, SUB))
         out.append("</svg>")
         panels.append("\n".join(out))
     return ('<div class="panels">' +
@@ -580,6 +599,20 @@ def pred_table(D):
         rows.append("<tr>%s<td><b>%s</b></td><td class='num'>%s</td><td>%s</td><td><span class='conf' style='color:%s;background:%s14'>%s</span></td><td class='why'>%s</td></tr>" % (sess_td, typ, left, when, cc, cc, conf, why))
     return """<table class="predt"><thead><tr><th>场次</th><th>票型</th><th class="num">当前余量</th><th>预计售罄时间</th><th>置信度</th><th>判断依据</th></tr></thead><tbody>%s</tbody></table>""" % "\n".join(rows)
 
+def single_table(D):
+    """10.31 单店票按门店（剔除 HERO DOME / SOUL HOUSE / 复兴公园游乐场）"""
+    s = D.get("single31") or {}
+    per = s.get("per") or {}; pd = s.get("per_delta") or {}
+    rows = []
+    for i, (m, v) in enumerate(sorted(per.items(), key=lambda x: -x[1])):
+        d = pd.get(m, 0)
+        dtxt = "<b style='color:%s'>+%s</b>" % (GREEN, fmt(d)) if d > 0 else ("<span style='color:%s'>%s</span>" % (ORANGE, fmt(d)) if d < 0 else "—")
+        rows.append("<tr><td>%s</td><td class='num strong'>%s</td><td class='num'>%s</td></tr>" % (m, fmt(v), dtxt))
+    td = s.get("delta", 0)
+    tdtxt = "<b style='color:%s'>+%s</b>" % (GREEN, fmt(td)) if td > 0 else "—"
+    rows.append("<tr class='tot'><td>合计（%d 家店）</td><td class='num strong'>%s</td><td class='num'>%s</td></tr>" % (len(per), fmt(s.get("total", 0)), tdtxt))
+    return """<table><thead><tr><th>门店</th><th class="num">已售（张）</th><th class="num">较上轮</th></tr></thead><tbody>%s</tbody></table>""" % "\n".join(rows)
+
 def detail_table(D):
     rows = []
     for k in ("10.30", "10.31"):
@@ -593,10 +626,10 @@ def detail_table(D):
                     % (k, fmt(n["paid"]), fmt(n["left"]), GREEN, n["pct"], min(n["pct"], 100), GREEN,
                        fmt(sum(p["order"] for p in n["per"].values())), fmt(sum(p["refund"] for p in n["per"].values())),
                        pct(sum(p["refund"] for p in n["per"].values()), sum(p["order"] for p in n["per"].values()))))
-        if k == "10.30" and D.get("late30", {}).get("show"):
+        if k == "10.31" and D.get("late30", {}).get("show"):
             la = D["late30"]
             rows.append("<tr><td></td><td>🌙 晚场票（不限量）</td><td class='num'>不限量</td><td class='num strong'>%s</td><td class='num'>—</td><td class='pctcell'><b style='color:%s'>—</b><div class='mbar'><span style='width:0%%'></span></div></td><td class='num'>%s</td><td class='num'>%s</td><td class='num'>%.1f%%</td></tr>"
-                        % (fmt(la["paid"]), BLUE, fmt(la["order"]), fmt(la["refund"]), pct(la["refund"], la["order"])))
+                        % (fmt(la["paid"]), ORANGE, fmt(la["order"]), fmt(la["refund"]), pct(la["refund"], la["order"])))
     return """<table><thead><tr><th>场次</th><th>票型</th><th class="num">库存</th><th class="num">已售</th><th class="num">待售</th><th>库存消耗进度</th><th class="num">下单</th><th class="num">退款</th><th class="num">退款率</th></tr></thead><tbody>%s</tbody></table>""" % "\n".join(rows)
 
 CSS = """
@@ -667,7 +700,9 @@ def render(D):
 <div class="hint" style="margin:12px 0 0">售罄钟点为经验估计：按当天分时购买曲线（高峰 14:00–22:00）推算，数据粒度为日级，实际可能前后漂移 1–2 小时。</div></div>
 <div class="card"><h2>③ 两晚同票型消耗率对比<span>同口径横向可比</span></h2>__FIG2__</div>
 <div class="card"><h2>④ 近 7 日单日新增支付票数<span>卖速趋势</span></h2>__FIG4__</div>
-<div class="card"><h2>⑤ 明细数据</h2>__TABLE__
+<div class="card"><h2>⑤ 10.31 单店票售卖 · 按门店<span>数据集55【实时】单店票售卖情况总览</span></h2>
+<div class="hint">当天全部场次单店票支付成功票数；已剔除 HERO DOME、SOUL HOUSE、复兴公园游乐场。</div>__SINGLE__</div>
+<div class="card"><h2>⑥ 明细数据</h2>__TABLE__
 <div class="hint" style="margin:12px 0 0">单位：张。已售 = 支付成功票数（已扣退款成功），非核销。</div></div>
 <div class="card"><h2>口径与模型备注</h2><div class="note">
 <b>① 库存</b>：超早 300 / 早场 900 / 正价 1,050，每晚独立。<br>
@@ -685,6 +720,7 @@ def render(D):
             % (fn(D), fn(D, mobile=True)))
     html = html.replace("__TABLE__", '<div class="table-wrap">%s</div>' % detail_table(D))
     html = html.replace("__PRED__", '<div class="table-wrap">%s</div>' % pred_table(D))
+    html = html.replace("__SINGLE__", '<div class="table-wrap">%s</div>' % single_table(D))
     return html
 
 def send_feishu(D):
@@ -693,52 +729,50 @@ def send_feishu(D):
         print("no webhook, skip"); return
     pages = os.environ.get("PAGES_URL", "").strip()
     lines, alerts = [], []
-    for idx, k in enumerate(("10.30", "10.31")):
-        if idx: lines.append("")   # 两场之间空行分隔
-        n = D["nights"][k]; lab = "10.30 周五场" if k == "10.30" else "10.31 周六·万圣夜"
-        dd = D.get("deltas", {}).get(k)
-        inc = "　⏫ 较上小时 **+%s**" % fmt(dd["total"]) if dd else ""
-        lines.append("**%s** 合计 %s/2,250（%.1f%%）%s" % (lab, fmt(n["paid"]), n["pct"], inc))
-        for t in ("超早", "早场", "正价"):
-            p = n["per"][t]
-            tag = "❗已售罄" if p["left"] <= 0 else ("⚠️仅剩 %s" % fmt(p["left"]) if p["left"] <= 250 else "余 %s" % fmt(p["left"]))
-            d1 = "（+%s）" % fmt(dd[t]) if dd and dd.get(t) else ""
-            lines.append("　· %s：%s/%s（%.1f%%）%s%s" % (t, fmt(p["paid"]), fmt(p["stock"]), p["pct"], tag, d1))
-            if 0 < p["left"] <= 250: alerts.append("%s %s 仅剩 %s 张" % (k, t, fmt(p["left"])))
-        if k == "10.30" and D.get("late30", {}).get("show"):
-            la = D["late30"]
-            d1 = "（+%s）" % fmt(la["delta"]) if la.get("delta") else ""
-            lines.append("　· 🌙 晚场票（不限量）：已售 %s 张%s" % (fmt(la["paid"]), d1))
-        f = D["forecast"].get(k)
-        if f:
-            hs = f.get("hours", {})
-            seg = " / ".join("%s %s" % (t, hh(hs.get(t))) for t in ("超早", "早场", "正价") if n["per"][t]["left"] > 0)
-            if k == "10.31":
-                if f.get("sellout"):
-                    lines.append("　📈 预测：%s 全场售罄（%s）" % (hh(f["full_hour"]), seg))
-                else:
-                    sold_seg = "、".join("%s %s 售罄" % (t, hh(hs.get(t))) for t in ("超早", "早场", "正价") if n["per"][t]["left"] > 0 and hs.get(t) and 0 < hs[t] < 99)
-                    tail = ("；" + sold_seg) if sold_seg else ""
-                    lines.append("　📈 预测：按当前卖速收官 ~%s（%.0f%%）预计不售罄%s" % (fmt(f["final_est"]), f["final_est"] / 2250 * 100, tail))
-            elif k == "10.30":
-                if f["full_hour"] and f["full_hour"] < 99:
-                    lines.append("　📈 预测：强场景 %s 售罄（%s）/ 弱场景收官 ~%s（%.0f%%）"
-                                 % (hh(f["full_hour"]), seg, fmt(f["weak_final"]), f["weak_final"] / 2250 * 100))
-                else:
-                    lines.append("　📈 预测：按当前卖速收官 ~%s（%.0f%%），预计不售罄（%s）"
-                                 % (fmt(f["strong_final"]), f["strong_final"] / 2250 * 100, seg))
-        if idx == 0:
-            lines.append("")   # 空行空间
-            lines.append("— — — — — — — — — —")
+    # 14:00 起卡片只推 10.31 场（10.30 场已收官；看板链接里仍保留双场数据）
+    k = "10.31"
+    n = D["nights"][k]; lab = "10.31 周六·万圣夜"
+    dd = D.get("deltas", {}).get(k)
+    inc = "　⏫ 较上小时 **+%s**" % fmt(dd["total"]) if dd else ""
+    lines.append("**%s** 合计 %s/2,250（%.1f%%）%s" % (lab, fmt(n["paid"]), n["pct"], inc))
+    for t in ("超早", "早场", "正价"):
+        p = n["per"][t]
+        tag = "❗已售罄" if p["left"] <= 0 else ("⚠️仅剩 %s" % fmt(p["left"]) if p["left"] <= 250 else "余 %s" % fmt(p["left"]))
+        d1 = "（+%s）" % fmt(dd[t]) if dd and dd.get(t) else ""
+        lines.append("　· %s：%s/%s（%.1f%%）%s%s" % (t, fmt(p["paid"]), fmt(p["stock"]), p["pct"], tag, d1))
+        if 0 < p["left"] <= 250: alerts.append("%s %s 仅剩 %s 张" % (k, t, fmt(p["left"])))
+    if D.get("late30", {}).get("show"):
+        la = D["late30"]
+        d1 = "（+%s）" % fmt(la["delta"]) if la.get("delta") else ""
+        lines.append("　· 🌙 晚场票（不限量）：已售 %s 张%s" % (fmt(la["paid"]), d1))
+    f = D["forecast"].get(k)
+    if f:
+        hs = f.get("hours", {})
+        seg = " / ".join("%s %s" % (t, hh(hs.get(t))) for t in ("超早", "早场", "正价") if n["per"][t]["left"] > 0)
+        if f.get("sellout"):
+            lines.append("　📈 预测：%s 全场售罄（%s）" % (hh(f["full_hour"]), seg))
+        else:
+            sold_seg = "、".join("%s %s 售罄" % (t, hh(hs.get(t))) for t in ("超早", "早场", "正价") if n["per"][t]["left"] > 0 and hs.get(t) and 0 < hs[t] < 99)
+            tail = ("；" + sold_seg) if sold_seg else ""
+            lines.append("　📈 预测：按当前卖速收官 ~%s（%.0f%%）预计不售罄%s" % (fmt(f["final_est"]), f["final_est"] / 2250 * 100, tail))
+    # 10.31 单店票（剔除 HERO DOME / SOUL HOUSE / 复兴公园游乐场）
+    s = D.get("single31") or {}
+    if s.get("per"):
+        lines.append("")
+        lines.append("— — — — — — — — — —")
+        d1 = "　⏫ 较上小时 **+%s**" % fmt(s["delta"]) if s.get("delta") else ""
+        lines.append("**10.31 单店票** 合计 %s 张（%d 家店）%s" % (fmt(s["total"]), len(s["per"]), d1))
+        per_d = s.get("per_delta") or {}
+        shop_seg = " · ".join("%s %s%s" % (m, fmt(v), "（+%s）" % fmt(per_d[m]) if per_d.get(m) else "")
+                              for m, v in sorted(s["per"].items(), key=lambda x: -x[1]))
+        lines.append("　· " + shop_seg)
     text = "\n".join(lines)
     if alerts: text = "🚨 " + "；".join(alerts) + "\n\n" + text
     elements = [{"tag": "markdown", "content": text}]
     if pages:
         bust = pages.rstrip("/") + "/?v=202610301004"   # 固定外发链接（该URL持续更新；页面内有no-cache+每小时自动刷新）
         elements.append({"tag": "action", "actions": [{"tag": "button", "text": {"tag": "plain_text", "content": "📊 打开完整看板（含预测曲线）"}, "url": bust, "type": "primary"}]})
-    note = "已售=支付成功(扣退款)；嘉年华会员并入正价；不含City Drink/参团/员工票；销售延续至次日0点后；超早21:00/早场22:00停售"
-    if D.get("late30", {}).get("show"):
-        note += "；晚场票不限量单列、不计入合计"
+    note = "已售=支付成功(扣退款)；嘉年华会员并入正价；不含City Drink/参团/员工票；销售延续至次日0点后；超早21:00/早场22:00停售；单店票不含HERO DOME/SOUL HOUSE/复兴公园游乐场；晚场票不限量、不计入合计"
     elements.append({"tag": "note", "elements": [{"tag": "plain_text", "content": note}]})
     card = {"msg_type": "interactive", "card": {"header": {"title": {"tag": "plain_text", "content": "🎃 万圣节库存监控 · " + D["stamp"]}, "template": "red" if alerts else "orange"}, "elements": elements}}
     req = urllib.request.Request(hook, data=json.dumps(card).encode(), headers={"Content-Type": "application/json"})
