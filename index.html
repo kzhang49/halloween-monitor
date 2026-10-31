@@ -25,6 +25,7 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 .mbar { height:6px; border-radius:3px; background:#EDEFF2; overflow:hidden; }
 .mbar span { display:block; height:6px; border-radius:3px; }
 .foot { text-align:center; font-size:11px; color:#B0B7C3; margin-top:6px; }
+/* 响应式：双栏进度图 + 图表桌面/手机双版本切换 */
 .panels { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .only-mobile { display:none; }
 .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
@@ -43,10 +44,10 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 }
 </style></head><body><div class="container">
 <div class="card"><h1>万圣节库存消耗进度 · 10.30（周五）vs 10.31（周六 · 万圣夜）</h1>
-<div class="subtitle">数据截至 <b>2026-10-31 13:11</b>（每小时自动更新）｜ 来源：Superset 看板 27【实时】散客票务监测 ｜ 口径：<b>支付成功票数 ÷ 单日库存</b>（超早 300 / 早场 900 / 正价 1,050，每晚独立）｜ 已剔除 City Drink、限时参团、员工福利场次票；<b>嘉年华会员专属并入正价票</b>；场次销售延续至自然日次日 0 点后（计入该场）</div></div>
+<div class="subtitle">数据截至 <b>2026-10-31 14:05</b>（每小时自动更新）｜ 来源：Superset 看板 27【实时】散客票务监测 ｜ 口径：<b>支付成功票数 ÷ 单日库存</b>（超早 300 / 早场 900 / 正价 1,050，每晚独立）｜ 已剔除 City Drink、限时参团、员工福利场次票；<b>嘉年华会员专属并入正价票</b>；场次销售延续至自然日次日 0 点后（计入该场）</div></div>
 <div class="card"><h2>① 分晚 · 各票型库存消耗进度<span>条内数字 = 已售 / 库存</span></h2>
-<div class="hint">左右两栏为 10.30 与 10.31 两个独立场次；末行「2 点前三票型合计」对应每晚 2,250 张的 2 点前库存池。</div><div class="panels"><div class="panel"><svg viewBox="0 0 548 612" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
-<rect x="0" y="0" width="548" height="612" rx="12" fill="#F7F8FA"/>
+<div class="hint">左右两栏为 10.30 与 10.31 两个独立场次；末行「2 点前三票型合计」对应每晚 2,250 张的 2 点前库存池。</div><div class="panels"><div class="panel"><svg viewBox="0 0 548 566" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
+<rect x="0" y="0" width="548" height="566" rx="12" fill="#F7F8FA"/>
 <text x="22" y="32" fill="#1A1D24" font-size="17" font-weight="700">10.30 周五</text>
 <text x="526" y="32" fill="#5A6270" font-size="12" text-anchor="end">已售 2,227 / 2,250</text>
 <text x="22" y="62" fill="#1A1D24" font-size="15" font-weight="600">超级早鸟票</text>
@@ -81,15 +82,10 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <rect x="22" y="426" width="504" height="26" rx="6" fill="#E8EAED"/>
 <rect x="22" y="426" width="498.8" height="26" rx="6" fill="#17A673"/>
 <text x="32" y="444" fill="#FFF" font-size="12.5" font-weight="600">2,227/2,250</text>
-<line x1="22" y1="466" x2="526" y2="466" stroke="#DDE1E7" stroke-dasharray="3 4"/>
-<text x="22" y="482" fill="#1A1D24" font-size="15" font-weight="600">🌙 晚场票</text>
-<text x="96.5" y="482" fill="#98A2B3" font-size="11.5">10.31 凌晨 2 点起售 · 不限量 · 不计入合计</text>
-<text x="526" y="484" fill="#2E6BE6" font-size="21" font-weight="700" text-anchor="end">124 张</text>
-<text x="526" y="504" fill="#5A6270" font-size="11.5" text-anchor="end">已售（2:00 起售，无库存上限）</text>
-</svg></div><div class="panel"><svg viewBox="0 0 548 566" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
-<rect x="0" y="0" width="548" height="566" rx="12" fill="#F7F8FA"/>
+</svg></div><div class="panel"><svg viewBox="0 0 548 612" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
+<rect x="0" y="0" width="548" height="612" rx="12" fill="#F7F8FA"/>
 <text x="22" y="32" fill="#1A1D24" font-size="17" font-weight="700">10.31 周六 · 万圣夜</text>
-<text x="526" y="32" fill="#5A6270" font-size="12" text-anchor="end">已售 2,028 / 2,250</text>
+<text x="526" y="32" fill="#5A6270" font-size="12" text-anchor="end">已售 2,061 / 2,250</text>
 <text x="22" y="62" fill="#1A1D24" font-size="15" font-weight="600">超级早鸟票</text>
 <text x="105" y="62" fill="#98A2B3" font-size="11.5">428 RMB</text>
 <text x="526" y="62" fill="#E8543F" font-size="21" font-weight="700" text-anchor="end">100.0%</text>
@@ -101,30 +97,35 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="32" y="108" fill="#FFF" font-size="12.5" font-weight="600">300/300</text>
 <text x="22" y="166" fill="#1A1D24" font-size="15" font-weight="600">早场票</text>
 <text x="75" y="166" fill="#98A2B3" font-size="11.5">458 RMB</text>
-<text x="526" y="166" fill="#E8543F" font-size="21" font-weight="700" text-anchor="end">100.0%</text>
-<text x="22" y="186" fill="#5A6270" font-size="11.5">库存 900 · 已售 900 · 待售 0 · 退 74</text>
+<text x="526" y="166" fill="#E8543F" font-size="21" font-weight="700" text-anchor="end">99.7%</text>
+<text x="22" y="186" fill="#5A6270" font-size="11.5">库存 900 · 已售 897 · 待售 3 · 退 77</text>
 <rect x="22" y="194" width="504" height="26" rx="6" fill="#E8EAED"/>
-<rect x="22" y="194" width="504.0" height="26" rx="6" fill="#E8543F"/>
+<rect x="22" y="194" width="502.3" height="26" rx="6" fill="#E8543F"/>
 <rect x="492" y="197" width="34" height="19" rx="9.5" fill="#E8543F"/>
 <text x="509" y="211" fill="#FFF" font-size="11" font-weight="600" text-anchor="middle">售罄</text>
-<text x="32" y="212" fill="#FFF" font-size="12.5" font-weight="600">900/900</text>
+<text x="32" y="212" fill="#FFF" font-size="12.5" font-weight="600">897/900</text>
 <text x="22" y="270" fill="#1A1D24" font-size="15" font-weight="600">正价票（含嘉年华会员）</text>
 <text x="195" y="270" fill="#98A2B3" font-size="11.5">488 RMB</text>
-<text x="526" y="270" fill="#E8543F" font-size="21" font-weight="700" text-anchor="end">78.9%</text>
-<text x="22" y="290" fill="#5A6270" font-size="11.5">库存 1,050 · 已售 828 · 待售 222 · 退 79</text>
+<text x="526" y="270" fill="#E8543F" font-size="21" font-weight="700" text-anchor="end">82.3%</text>
+<text x="22" y="290" fill="#5A6270" font-size="11.5">库存 1,050 · 已售 864 · 待售 186 · 退 81</text>
 <rect x="22" y="298" width="504" height="26" rx="6" fill="#E8EAED"/>
-<rect x="22" y="298" width="397.4" height="26" rx="6" fill="#E8543F"/>
-<text x="32" y="316" fill="#FFF" font-size="12.5" font-weight="600">828/1,050</text>
+<rect x="22" y="298" width="414.7" height="26" rx="6" fill="#E8543F"/>
+<text x="32" y="316" fill="#FFF" font-size="12.5" font-weight="600">864/1,050</text>
 <line x1="22" y1="368" x2="526" y2="368" stroke="#DDE1E7"/>
 <text x="22" y="398" fill="#1A1D24" font-size="15" font-weight="700">2 点前三票型合计</text>
-<text x="526" y="398" fill="#17A673" font-size="21" font-weight="700" text-anchor="end">90.1%</text>
-<text x="22" y="418" fill="#5A6270" font-size="11.5">库存总量 2,250（300+900+1050）· 已售 2,028 · 待售 222</text>
+<text x="526" y="398" fill="#17A673" font-size="21" font-weight="700" text-anchor="end">91.6%</text>
+<text x="22" y="418" fill="#5A6270" font-size="11.5">库存总量 2,250（300+900+1050）· 已售 2,061 · 待售 189</text>
 <rect x="22" y="426" width="504" height="26" rx="6" fill="#E8EAED"/>
-<rect x="22" y="426" width="454.3" height="26" rx="6" fill="#17A673"/>
-<text x="32" y="444" fill="#FFF" font-size="12.5" font-weight="600">2,028/2,250</text>
+<rect x="22" y="426" width="461.7" height="26" rx="6" fill="#17A673"/>
+<text x="32" y="444" fill="#FFF" font-size="12.5" font-weight="600">2,061/2,250</text>
+<line x1="22" y1="466" x2="526" y2="466" stroke="#DDE1E7" stroke-dasharray="3 4"/>
+<text x="22" y="482" fill="#1A1D24" font-size="15" font-weight="600">🌙 晚场票</text>
+<text x="96" y="482" fill="#98A2B3" font-size="11.5">凌晨 2 点起售 · 不限量 · 不计入合计</text>
+<text x="526" y="484" fill="#E8543F" font-size="21" font-weight="700" text-anchor="end">124 张</text>
+<text x="526" y="504" fill="#5A6270" font-size="11.5" text-anchor="end">已售（无库存上限）</text>
 </svg></div></div></div>
 <div class="card"><h2>② 售罄预测<span>基于历史场次"当天购入"规律外推</span></h2>
-<div class="hint">用户以当天购入为主：近 4 周普通周五当天购买占 <b>71%–76%</b>，普通周六 T-1 日占 ~31%、T-0 占 ~29%。 据此外推：<b style='color:#E8543F'>10.31 场预计 18:00 前后 售罄，当天无票可售</b>；</div><div class="only-desktop"><svg viewBox="0 0 1132 356" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
+<div class="hint">用户以当天购入为主：近 4 周普通周五当天购买占 <b>71%–76%</b>，普通周六 T-1 日占 ~31%、T-0 占 ~29%。 据此外推：<b style='color:#E8543F'>10.31 场预计 19:00 前后 售罄，当天无票可售</b>；</div><div class="only-desktop"><svg viewBox="0 0 1132 356" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
 <line x1="70" y1="280.0" x2="942" y2="280.0" stroke="#E8EAED" />
 <text x="64" y="283.5" fill="#98A2B3" font-size="10" text-anchor="end">0</text>
 <line x1="70" y1="243.1" x2="942" y2="243.1" stroke="#E8EAED" stroke-dasharray="3 4"/>
@@ -155,15 +156,15 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="870.1" y="274" fill="#B08400" font-size="10">预测区</text>
 <path d="M 70.0 280.0 L 121.3 279.5 L 172.6 279.5 L 223.9 279.5 L 275.2 279.4 L 326.5 278.8 L 377.8 278.1 L 429.1 276.2 L 480.4 274.5 L 531.6 273.6 L 582.9 270.0 L 634.2 261.7 L 685.5 250.3 L 736.8 237.3 L 788.1 217.6 L 839.4 96.1 L 890.7 74.4" fill="none" stroke="#2E6BE6" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
 <circle cx="890.7" cy="74.4" r="4.5" fill="#FFF" stroke="#2E6BE6" stroke-width="2.5"/>
-<text x="882.7" y="62.4" fill="#2E6BE6" font-size="12" font-weight="700" text-anchor="end">10.30 场 · 已售 2,227</text>
-<path d="M 70.0 279.7 L 121.3 278.9 L 172.6 278.5 L 223.9 277.5 L 275.2 275.8 L 326.5 273.9 L 377.8 269.7 L 429.1 265.3 L 480.4 260.0 L 531.6 254.2 L 582.9 247.1 L 634.2 235.1 L 685.5 216.3 L 736.8 190.9 L 788.1 157.9 L 839.4 115.0 L 890.7 92.8" fill="none" stroke="#E8543F" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="890.7" cy="92.8" r="4.5" fill="#FFF" stroke="#E8543F" stroke-width="2.5"/>
-<text x="882.7" y="80.8" fill="#E8543F" font-size="12" font-weight="700" text-anchor="end">10.31 场 · 已售 2,028</text>
-<path d="M 890.7 92.8 L 929.2 72.3" fill="none" stroke="#E8543F" stroke-width="2.2" stroke-dasharray="6 5"/>
-<circle cx="929.2" cy="72.3" r="6" fill="#E8543F"/><text x="929.2" y="75.8" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>
-<text x="921.2" y="50.3" fill="#E8543F" font-size="12" font-weight="700" text-anchor="end">10.31 场 · 预计 18:00 前后 售罄</text>
+<text x="882.7" y="62.4" fill="#2E6BE6" font-size="12.0" font-weight="700" text-anchor="end">10.30 场 · 已售 2,227</text>
+<path d="M 70.0 279.7 L 121.3 278.9 L 172.6 278.5 L 223.9 277.5 L 275.2 275.8 L 326.5 273.9 L 377.8 269.7 L 429.1 265.3 L 480.4 260.0 L 531.6 254.2 L 582.9 247.1 L 634.2 235.1 L 685.5 216.7 L 736.8 191.3 L 788.1 158.2 L 839.4 115.6 L 890.7 89.8" fill="none" stroke="#E8543F" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="890.7" cy="89.8" r="4.5" fill="#FFF" stroke="#E8543F" stroke-width="2.5"/>
+<text x="882.7" y="77.8" fill="#E8543F" font-size="12.0" font-weight="700" text-anchor="end">10.31 场 · 已售 2,061</text>
+<path d="M 890.7 89.8 L 931.3 72.3" fill="none" stroke="#E8543F" stroke-width="2.2" stroke-dasharray="6 5"/>
+<circle cx="931.3" cy="72.3" r="6" fill="#E8543F"/><text x="931.3" y="75.8" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>
+<text x="923.3" y="50.3" fill="#E8543F" font-size="12.0" font-weight="700" text-anchor="end">10.31 场 · 预计 19:00 前后 售罄</text>
 <line x1="70" y1="14" x2="90" y2="14" stroke="#5A6270" stroke-width="2.6"/>
-<text x="96" y="18" fill="#5A6270" font-size="10.5">实际（截至 10-31 13:11）</text>
+<text x="96" y="18" fill="#5A6270" font-size="10.5">实际（截至 10-31 14:05）</text>
 <line x1="241" y1="14" x2="261" y2="14" stroke="#5A6270" stroke-width="2.2" stroke-dasharray="5 4"/>
 <text x="267" y="18" fill="#5A6270" font-size="10.5">预测</text>
 </svg></div><div class="only-mobile"><svg viewBox="0 0 560 400" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
@@ -179,33 +180,33 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="38" y="49.5" fill="#98A2B3" font-size="10" text-anchor="end">2,600</text>
 <line x1="44" y1="82.6" x2="544" y2="82.6" stroke="#E8A33D" stroke-width="1.4" stroke-dasharray="6 5"/>
 <text x="50" y="76.6" fill="#E8A33D" font-size="10.5" font-weight="600">库存上限 2,250</text>
-<text x="44.0" y="338" fill="#98A2B3" font-size="9" text-anchor="middle">10/15</text>
-<text x="132.2" y="338" fill="#98A2B3" font-size="9" text-anchor="middle">10/18</text>
-<text x="220.5" y="338" fill="#98A2B3" font-size="9" text-anchor="middle">10/21</text>
-<text x="308.7" y="338" fill="#98A2B3" font-size="9" text-anchor="middle">10/24</text>
-<text x="396.9" y="338" fill="#98A2B3" font-size="9" text-anchor="middle">10/27</text>
-<text x="485.2" y="338" fill="#98A2B3" font-size="9" text-anchor="middle">10/30</text>
-<text x="514.6" y="338" fill="#98A2B3" font-size="9" text-anchor="middle">10/31（今）</text>
-<text x="544.0" y="338" fill="#98A2B3" font-size="9" text-anchor="middle">11/01</text>
+<text x="44.0" y="338" fill="#98A2B3" font-size="9.0" text-anchor="middle">10/15</text>
+<text x="132.2" y="338" fill="#98A2B3" font-size="9.0" text-anchor="middle">10/18</text>
+<text x="220.5" y="338" fill="#98A2B3" font-size="9.0" text-anchor="middle">10/21</text>
+<text x="308.7" y="338" fill="#98A2B3" font-size="9.0" text-anchor="middle">10/24</text>
+<text x="396.9" y="338" fill="#98A2B3" font-size="9.0" text-anchor="middle">10/27</text>
+<text x="485.2" y="338" fill="#98A2B3" font-size="9.0" text-anchor="middle">10/30</text>
+<text x="514.6" y="338" fill="#98A2B3" font-size="9.0" text-anchor="middle">10/31（今）</text>
+<text x="544.0" y="338" fill="#98A2B3" font-size="9.0" text-anchor="middle">11/01</text>
 <rect x="499.9" y="46" width="44.1" height="272" fill="#FDF8E8"/>
 <text x="504.9" y="312" fill="#B08400" font-size="10">预测区</text>
 <path d="M 44.0 318.0 L 73.4 317.5 L 102.8 317.5 L 132.2 317.5 L 161.6 317.4 L 191.1 316.6 L 220.5 315.8 L 249.9 313.7 L 279.3 311.7 L 308.7 310.8 L 338.1 306.7 L 367.5 297.3 L 396.9 284.3 L 426.4 269.6 L 455.8 247.3 L 485.2 109.6 L 514.6 85.0" fill="none" stroke="#2E6BE6" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
 <circle cx="514.6" cy="85.0" r="4.5" fill="#FFF" stroke="#2E6BE6" stroke-width="2.5"/>
 <text x="506.6" y="73.0" fill="#2E6BE6" font-size="10.5" font-weight="700" text-anchor="end">10.30 已售 2,227</text>
-<path d="M 44.0 317.7 L 73.4 316.7 L 102.8 316.3 L 132.2 315.2 L 161.6 313.2 L 191.1 311.1 L 220.5 306.3 L 249.9 301.4 L 279.3 295.3 L 308.7 288.8 L 338.1 280.8 L 367.5 267.2 L 396.9 245.8 L 426.4 217.0 L 455.8 179.6 L 485.2 131.1 L 514.6 105.8" fill="none" stroke="#E8543F" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="514.6" cy="105.8" r="4.5" fill="#FFF" stroke="#E8543F" stroke-width="2.5"/>
-<text x="506.6" y="93.8" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="end">10.31 已售 2,028</text>
-<path d="M 514.6 105.8 L 536.6 82.6" fill="none" stroke="#E8543F" stroke-width="2.2" stroke-dasharray="6 5"/>
-<circle cx="536.6" cy="82.6" r="6" fill="#E8543F"/><text x="536.6" y="86.1" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>
-<text x="528.6" y="60.6" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="end">10.31场 18:00 前后售罄</text>
+<path d="M 44.0 317.7 L 73.4 316.7 L 102.8 316.3 L 132.2 315.2 L 161.6 313.2 L 191.1 311.1 L 220.5 306.3 L 249.9 301.4 L 279.3 295.3 L 308.7 288.8 L 338.1 280.8 L 367.5 267.2 L 396.9 246.2 L 426.4 217.5 L 455.8 180.0 L 485.2 131.7 L 514.6 102.4" fill="none" stroke="#E8543F" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="514.6" cy="102.4" r="4.5" fill="#FFF" stroke="#E8543F" stroke-width="2.5"/>
+<text x="506.6" y="90.4" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="end">10.31 已售 2,061</text>
+<path d="M 514.6 102.4 L 537.9 82.6" fill="none" stroke="#E8543F" stroke-width="2.2" stroke-dasharray="6 5"/>
+<circle cx="537.9" cy="82.6" r="6" fill="#E8543F"/><text x="537.9" y="86.1" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>
+<text x="529.9" y="60.6" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="end">10.31场 19:00 前后售罄</text>
 <line x1="44" y1="14" x2="64" y2="14" stroke="#5A6270" stroke-width="2.6"/>
-<text x="70" y="18" fill="#5A6270" font-size="10.5">实际（截至 10-31 13:11）</text>
+<text x="70" y="18" fill="#5A6270" font-size="10.5">实际（截至 10-31 14:05）</text>
 <line x1="215" y1="14" x2="235" y2="14" stroke="#5A6270" stroke-width="2.2" stroke-dasharray="5 4"/>
 <text x="241" y="18" fill="#5A6270" font-size="10.5">预测</text>
 </svg></div><div class="table-wrap"><table class="predt"><thead><tr><th>场次</th><th>票型</th><th class="num">当前余量</th><th>预计售罄时间</th><th>置信度</th><th>判断依据</th></tr></thead><tbody><tr><td class='psess'>10.31 万圣夜</td><td><b>超级早鸟</b></td><td class='num'>0</td><td>已售罄</td><td><span class='conf' style='color:#98A2B3;background:#98A2B314'>—</span></td><td class='why'>退票回流是唯一余量来源</td></tr>
-<tr><td></td><td><b>早场票</b></td><td class='num'>0</td><td>已售罄</td><td><span class='conf' style='color:#98A2B3;background:#98A2B314'>—</span></td><td class='why'>退票回流是唯一余量来源</td></tr>
-<tr><td></td><td><b>正价票</b></td><td class='num'>222</td><td>18:00 前后</td><td><span class='conf' style='color:#17A673;background:#17A67314'>高</span></td><td class='why'>按 T-1 需求 803 张 + 溢出顺移（超早→早场→正价）</td></tr>
-<tr><td></td><td><b>全场合计</b></td><td class='num'>222</td><td>预计 18:00 前后 售罄，10.31 当天无票</td><td><span class='conf' style='color:#17A673;background:#17A67314'>高</span></td><td class='why'>T-2 末累计 2,028 张，需求外推 ~2,517 ≫ 2,250</td></tr></tbody></table></div>
+<tr><td></td><td><b>早场票</b></td><td class='num'>3</td><td>16:00 前后</td><td><span class='conf' style='color:#17A673;background:#17A67314'>高</span></td><td class='why'>按 T-1 需求 718 张 + 溢出顺移（超早→早场→正价）</td></tr>
+<tr><td></td><td><b>正价票</b></td><td class='num'>186</td><td>19:00 前后</td><td><span class='conf' style='color:#17A673;background:#17A67314'>高</span></td><td class='why'>按 T-1 需求 718 张 + 溢出顺移（超早→早场→正价）</td></tr>
+<tr><td></td><td><b>全场合计</b></td><td class='num'>189</td><td>预计 19:00 前后 售罄，10.31 当天无票</td><td><span class='conf' style='color:#17A673;background:#17A67314'>高</span></td><td class='why'>T-2 末累计 2,061 张，需求外推 ~2,508 ≫ 2,250</td></tr></tbody></table></div>
 <div class="hint" style="margin:12px 0 0">售罄钟点为经验估计：按当天分时购买曲线（高峰 14:00–22:00）推算，数据粒度为日级，实际可能前后漂移 1–2 小时。</div></div>
 <div class="card"><h2>③ 两晚同票型消耗率对比<span>同口径横向可比</span></h2><div class="only-desktop"><svg viewBox="0 0 1132 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
 <line x1="66" y1="232.0" x2="1108" y2="232.0" stroke="#E8EAED" />
@@ -220,30 +221,30 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="58" y="95.2" fill="#98A2B3" font-size="10" text-anchor="end">80%</text>
 <line x1="66" y1="56.0" x2="1108" y2="56.0" stroke="#E8EAED" stroke-dasharray="3 4"/>
 <text x="58" y="60.0" fill="#98A2B3" font-size="10" text-anchor="end">100%</text>
-<rect x="138.3" y="56.0" width="54" height="176.0" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
-<text x="165.3" y="49.0" fill="#5A6270" font-size="12" font-weight="700" text-anchor="middle">100%</text>
-<rect x="200.3" y="56.0" width="54" height="176.0" rx="4" fill="#E8543F" fill-opacity="1"/>
-<text x="227.3" y="49.0" fill="#E8543F" font-size="12" font-weight="700" text-anchor="middle">100%</text>
-<text x="196.3" y="256" fill="#1A1D24" font-size="12.5" text-anchor="middle">超级早鸟</text>
+<rect x="138.2" y="56.0" width="54" height="176.0" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
+<text x="165.2" y="49.0" fill="#5A6270" font-size="12.0" font-weight="700" text-anchor="middle">100%</text>
+<rect x="200.2" y="56.0" width="54" height="176.0" rx="4" fill="#E8543F" fill-opacity="1"/>
+<text x="227.2" y="49.0" fill="#E8543F" font-size="12.0" font-weight="700" text-anchor="middle">100%</text>
+<text x="196.2" y="256" fill="#1A1D24" font-size="12.5" text-anchor="middle">超级早鸟</text>
 <rect x="398.8" y="122.5" width="54" height="109.5" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
-<text x="425.8" y="115.5" fill="#5A6270" font-size="12" font-weight="700" text-anchor="middle">62%</text>
-<rect x="460.8" y="56.0" width="54" height="176.0" rx="4" fill="#E8543F" fill-opacity="1"/>
-<text x="487.8" y="49.0" fill="#E8543F" font-size="12" font-weight="700" text-anchor="middle">100%</text>
+<text x="425.8" y="115.5" fill="#5A6270" font-size="12.0" font-weight="700" text-anchor="middle">62%</text>
+<rect x="460.8" y="56.6" width="54" height="175.4" rx="4" fill="#E8543F" fill-opacity="1"/>
+<text x="487.8" y="49.6" fill="#E8543F" font-size="12.0" font-weight="700" text-anchor="middle">100%</text>
 <text x="456.8" y="256" fill="#1A1D24" font-size="12.5" text-anchor="middle">早场</text>
-<rect x="659.3" y="56.0" width="54" height="176.0" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
-<text x="686.3" y="49.0" fill="#5A6270" font-size="12" font-weight="700" text-anchor="middle">130%</text>
-<rect x="721.3" y="93.2" width="54" height="138.8" rx="4" fill="#E8543F" fill-opacity="1"/>
-<text x="748.3" y="86.2" fill="#E8543F" font-size="12" font-weight="700" text-anchor="middle">79%</text>
-<text x="717.3" y="256" fill="#1A1D24" font-size="12.5" text-anchor="middle">正价</text>
+<rect x="659.2" y="56.0" width="54" height="176.0" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
+<text x="686.2" y="49.0" fill="#5A6270" font-size="12.0" font-weight="700" text-anchor="middle">130%</text>
+<rect x="721.2" y="87.2" width="54" height="144.8" rx="4" fill="#E8543F" fill-opacity="1"/>
+<text x="748.2" y="80.2" fill="#E8543F" font-size="12.0" font-weight="700" text-anchor="middle">82%</text>
+<text x="717.2" y="256" fill="#1A1D24" font-size="12.5" text-anchor="middle">正价</text>
 <rect x="919.8" y="57.8" width="54" height="174.2" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
-<text x="946.8" y="50.8" fill="#5A6270" font-size="12" font-weight="700" text-anchor="middle">99%</text>
-<rect x="981.8" y="73.4" width="54" height="158.6" rx="4" fill="#E8543F" fill-opacity="1"/>
-<text x="1008.8" y="66.4" fill="#E8543F" font-size="12" font-weight="700" text-anchor="middle">90%</text>
+<text x="946.8" y="50.8" fill="#5A6270" font-size="12.0" font-weight="700" text-anchor="middle">99%</text>
+<rect x="981.8" y="70.8" width="54" height="161.2" rx="4" fill="#E8543F" fill-opacity="1"/>
+<text x="1008.8" y="63.8" fill="#E8543F" font-size="12.0" font-weight="700" text-anchor="middle">92%</text>
 <text x="977.8" y="256" fill="#1A1D24" font-size="12.5" text-anchor="middle">合计</text>
 <rect x="66" y="22" width="10" height="10" rx="2" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="82" y="31" fill="#5A6270" font-size="11">10.30 周五</text>
-<rect x="156.12" y="22" width="10" height="10" rx="2" fill="#E8543F" fill-opacity="1"/>
-<text x="172.12" y="31" fill="#5A6270" font-size="11">10.31 周六</text>
+<rect x="156" y="22" width="10" height="10" rx="2" fill="#E8543F" fill-opacity="1"/>
+<text x="172" y="31" fill="#5A6270" font-size="11">10.31 周六</text>
 </svg></div><div class="only-mobile"><svg viewBox="0 0 560 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
 <line x1="46" y1="232.0" x2="536" y2="232.0" stroke="#E8EAED" />
 <text x="38" y="236.0" fill="#98A2B3" font-size="10" text-anchor="end">0%</text>
@@ -257,30 +258,30 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="38" y="95.2" fill="#98A2B3" font-size="10" text-anchor="end">80%</text>
 <line x1="46" y1="56.0" x2="536" y2="56.0" stroke="#E8EAED" stroke-dasharray="3 4"/>
 <text x="38" y="60.0" fill="#98A2B3" font-size="10" text-anchor="end">100%</text>
-<rect x="73.3" y="56.0" width="30" height="176.0" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
-<text x="88.3" y="49.0" fill="#5A6270" font-size="10.5" font-weight="700" text-anchor="middle">100%</text>
-<rect x="111.3" y="56.0" width="30" height="176.0" rx="4" fill="#E8543F" fill-opacity="1"/>
-<text x="126.3" y="49.0" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="middle">100%</text>
-<text x="107.3" y="256" fill="#1A1D24" font-size="11" text-anchor="middle">超级早鸟</text>
+<rect x="73.2" y="56.0" width="30" height="176.0" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
+<text x="88.2" y="49.0" fill="#5A6270" font-size="10.5" font-weight="700" text-anchor="middle">100%</text>
+<rect x="111.2" y="56.0" width="30" height="176.0" rx="4" fill="#E8543F" fill-opacity="1"/>
+<text x="126.2" y="49.0" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="middle">100%</text>
+<text x="107.2" y="256" fill="#1A1D24" font-size="11.0" text-anchor="middle">超级早鸟</text>
 <rect x="195.8" y="122.5" width="30" height="109.5" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="210.8" y="115.5" fill="#5A6270" font-size="10.5" font-weight="700" text-anchor="middle">62%</text>
-<rect x="233.8" y="56.0" width="30" height="176.0" rx="4" fill="#E8543F" fill-opacity="1"/>
-<text x="248.8" y="49.0" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="middle">100%</text>
-<text x="229.8" y="256" fill="#1A1D24" font-size="11" text-anchor="middle">早场</text>
-<rect x="318.3" y="56.0" width="30" height="176.0" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
-<text x="333.3" y="49.0" fill="#5A6270" font-size="10.5" font-weight="700" text-anchor="middle">130%</text>
-<rect x="356.3" y="93.2" width="30" height="138.8" rx="4" fill="#E8543F" fill-opacity="1"/>
-<text x="371.3" y="86.2" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="middle">79%</text>
-<text x="352.3" y="256" fill="#1A1D24" font-size="11" text-anchor="middle">正价</text>
+<rect x="233.8" y="56.6" width="30" height="175.4" rx="4" fill="#E8543F" fill-opacity="1"/>
+<text x="248.8" y="49.6" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="middle">100%</text>
+<text x="229.8" y="256" fill="#1A1D24" font-size="11.0" text-anchor="middle">早场</text>
+<rect x="318.2" y="56.0" width="30" height="176.0" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
+<text x="333.2" y="49.0" fill="#5A6270" font-size="10.5" font-weight="700" text-anchor="middle">130%</text>
+<rect x="356.2" y="87.2" width="30" height="144.8" rx="4" fill="#E8543F" fill-opacity="1"/>
+<text x="371.2" y="80.2" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="middle">82%</text>
+<text x="352.2" y="256" fill="#1A1D24" font-size="11.0" text-anchor="middle">正价</text>
 <rect x="440.8" y="57.8" width="30" height="174.2" rx="4" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="455.8" y="50.8" fill="#5A6270" font-size="10.5" font-weight="700" text-anchor="middle">99%</text>
-<rect x="478.8" y="73.4" width="30" height="158.6" rx="4" fill="#E8543F" fill-opacity="1"/>
-<text x="493.8" y="66.4" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="middle">90%</text>
-<text x="474.8" y="256" fill="#1A1D24" font-size="11" text-anchor="middle">合计</text>
+<rect x="478.8" y="70.8" width="30" height="161.2" rx="4" fill="#E8543F" fill-opacity="1"/>
+<text x="493.8" y="63.8" fill="#E8543F" font-size="10.5" font-weight="700" text-anchor="middle">92%</text>
+<text x="474.8" y="256" fill="#1A1D24" font-size="11.0" text-anchor="middle">合计</text>
 <rect x="46" y="22" width="10" height="10" rx="2" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="62" y="31" fill="#5A6270" font-size="11">10.30 周五</text>
-<rect x="136.12" y="22" width="10" height="10" rx="2" fill="#E8543F" fill-opacity="1"/>
-<text x="152.12" y="31" fill="#5A6270" font-size="11">10.31 周六</text>
+<rect x="136" y="22" width="10" height="10" rx="2" fill="#E8543F" fill-opacity="1"/>
+<text x="152" y="31" fill="#5A6270" font-size="11">10.31 周六</text>
 </svg></div></div>
 <div class="card"><h2>④ 近 7 日单日新增支付票数<span>卖速趋势</span></h2><div class="only-desktop"><svg viewBox="0 0 1132 250" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'PingFang SC',Arial,sans-serif">
 <line x1="66" y1="196.0" x2="1112" y2="196.0" stroke="#E8EAED" />
@@ -327,8 +328,8 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="290.1" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/26</text>
 <rect x="396.6" y="183.3" width="40" height="12.7" rx="3" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="416.6" y="179.3" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">124</text>
-<rect x="442.6" y="175.1" width="40" height="20.9" rx="3" fill="#E8543F" fill-opacity="1"/>
-<text x="462.6" y="171.1" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">204</text>
+<rect x="442.6" y="175.5" width="40" height="20.5" rx="3" fill="#E8543F" fill-opacity="1"/>
+<text x="462.6" y="171.5" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">200</text>
 <text x="439.6" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/27</text>
 <rect x="546.0" y="181.5" width="40" height="14.5" rx="3" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="566.0" y="177.5" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">141</text>
@@ -342,13 +343,13 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="738.4" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/29</text>
 <rect x="844.9" y="61.0" width="40" height="135.0" rx="3" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="864.9" y="57.0" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">1,316</text>
-<rect x="890.9" y="148.4" width="40" height="47.6" rx="3" fill="#E8543F" fill-opacity="1"/>
-<text x="910.9" y="144.4" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">464</text>
+<rect x="890.9" y="148.6" width="40" height="47.4" rx="3" fill="#E8543F" fill-opacity="1"/>
+<text x="910.9" y="144.6" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">462</text>
 <text x="887.9" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/30</text>
 <rect x="994.3" y="171.9" width="40" height="24.1" rx="3" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="1014.3" y="167.9" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">235</text>
-<rect x="1040.3" y="171.3" width="40" height="24.7" rx="3" fill="#E8543F" fill-opacity="1"/>
-<text x="1060.3" y="167.3" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">241</text>
+<rect x="1040.3" y="167.3" width="40" height="28.7" rx="3" fill="#E8543F" fill-opacity="1"/>
+<text x="1060.3" y="163.3" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">280</text>
 <text x="1037.3" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/31</text>
 <rect x="66" y="6" width="9" height="9" rx="2" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="80" y="14" fill="#5A6270" font-size="10.5">10.30 周五</text>
@@ -383,8 +384,8 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="148.7" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/26</text>
 <rect x="198.9" y="183.3" width="18" height="12.7" rx="3" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="207.9" y="179.3" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">124</text>
-<rect x="222.9" y="175.1" width="18" height="20.9" rx="3" fill="#E8543F" fill-opacity="1"/>
-<text x="231.9" y="171.1" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">204</text>
+<rect x="222.9" y="175.5" width="18" height="20.5" rx="3" fill="#E8543F" fill-opacity="1"/>
+<text x="231.9" y="171.5" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">200</text>
 <text x="219.9" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/27</text>
 <rect x="270.0" y="181.5" width="18" height="14.5" rx="3" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="279.0" y="177.5" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">141</text>
@@ -398,28 +399,41 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <text x="362.1" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/29</text>
 <rect x="412.3" y="61.0" width="18" height="135.0" rx="3" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="421.3" y="57.0" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">1,316</text>
-<rect x="436.3" y="148.4" width="18" height="47.6" rx="3" fill="#E8543F" fill-opacity="1"/>
-<text x="445.3" y="144.4" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">464</text>
+<rect x="436.3" y="148.6" width="18" height="47.4" rx="3" fill="#E8543F" fill-opacity="1"/>
+<text x="445.3" y="144.6" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">462</text>
 <text x="433.3" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/30</text>
 <rect x="483.4" y="171.9" width="18" height="24.1" rx="3" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="492.4" y="167.9" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">235</text>
-<rect x="507.4" y="171.3" width="18" height="24.7" rx="3" fill="#E8543F" fill-opacity="1"/>
-<text x="516.4" y="167.3" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">241</text>
+<rect x="507.4" y="167.3" width="18" height="28.7" rx="3" fill="#E8543F" fill-opacity="1"/>
+<text x="516.4" y="163.3" fill="#5A6270" font-size="9.5" font-weight="600" text-anchor="middle">280</text>
 <text x="504.4" y="214" fill="#98A2B3" font-size="10" text-anchor="middle">10/31</text>
 <rect x="42" y="6" width="9" height="9" rx="2" fill="#2E6BE6" fill-opacity="0.45"/>
 <text x="56" y="14" fill="#5A6270" font-size="10.5">10.30 周五</text>
 <rect x="126" y="6" width="9" height="9" rx="2" fill="#E8543F" fill-opacity="1"/>
 <text x="140" y="14" fill="#5A6270" font-size="10.5">10.31 周六</text>
 </svg></div></div>
-<div class="card"><h2>⑤ 明细数据</h2><div class="table-wrap"><table><thead><tr><th>场次</th><th>票型</th><th class="num">库存</th><th class="num">已售</th><th class="num">待售</th><th>库存消耗进度</th><th class="num">下单</th><th class="num">退款</th><th class="num">退款率</th></tr></thead><tbody><tr><td>10.30</td><td>超级早鸟票</td><td class='num'>300</td><td class='num strong'>300</td><td class='num'>0</td><td class='pctcell'><b style='color:#2E6BE6'>100.0%</b><div class='mbar'><span style='width:100.0%;background:#2E6BE6'></span></div></td><td class='num'>388</td><td class='num'>88</td><td class='num'>22.7%</td></tr>
+<div class="card"><h2>⑤ 10.31 单店票售卖 · 按门店<span>数据集55【实时】单店票售卖情况总览</span></h2>
+<div class="hint">当天全部场次单店票支付成功票数；已剔除 HERO DOME、SOUL HOUSE、复兴公园游乐场。</div><div class="table-wrap"><table><thead><tr><th>门店</th><th class="num">已售（张）</th><th class="num">较上轮</th></tr></thead><tbody><tr><td>FRiENDS</td><td class='num strong'>300</td><td class='num'>—</td></tr>
+<tr><td>Culture Club</td><td class='num strong'>145</td><td class='num'>—</td></tr>
+<tr><td>绿洲OASIS</td><td class='num strong'>132</td><td class='num'>—</td></tr>
+<tr><td>HUSH</td><td class='num strong'>104</td><td class='num'>—</td></tr>
+<tr><td>JUMP</td><td class='num strong'>100</td><td class='num'>—</td></tr>
+<tr><td>ParkCoffeeClub</td><td class='num strong'>70</td><td class='num'>—</td></tr>
+<tr><td>JAKE</td><td class='num strong'>48</td><td class='num'>—</td></tr>
+<tr><td>La Fin</td><td class='num strong'>16</td><td class='num'>—</td></tr>
+<tr><td>RADI</td><td class='num strong'>14</td><td class='num'>—</td></tr>
+<tr><td>DIRTY HOUSE</td><td class='num strong'>7</td><td class='num'>—</td></tr>
+<tr><td>KZ Shanghai</td><td class='num strong'>2</td><td class='num'>—</td></tr>
+<tr class='tot'><td>合计（11 家店）</td><td class='num strong'>938</td><td class='num'>—</td></tr></tbody></table></div></div>
+<div class="card"><h2>⑥ 明细数据</h2><div class="table-wrap"><table><thead><tr><th>场次</th><th>票型</th><th class="num">库存</th><th class="num">已售</th><th class="num">待售</th><th>库存消耗进度</th><th class="num">下单</th><th class="num">退款</th><th class="num">退款率</th></tr></thead><tbody><tr><td>10.30</td><td>超级早鸟票</td><td class='num'>300</td><td class='num strong'>300</td><td class='num'>0</td><td class='pctcell'><b style='color:#2E6BE6'>100.0%</b><div class='mbar'><span style='width:100.0%;background:#2E6BE6'></span></div></td><td class='num'>388</td><td class='num'>88</td><td class='num'>22.7%</td></tr>
 <tr><td></td><td>早场票</td><td class='num'>900</td><td class='num strong'>560</td><td class='num'>340</td><td class='pctcell'><b style='color:#2E6BE6'>62.2%</b><div class='mbar'><span style='width:62.2%;background:#2E6BE6'></span></div></td><td class='num'>613</td><td class='num'>53</td><td class='num'>8.6%</td></tr>
 <tr><td></td><td>正价票（含嘉年华会员）</td><td class='num'>1,050</td><td class='num strong'>1,367</td><td class='num'>-317</td><td class='pctcell'><b style='color:#2E6BE6'>130.2%</b><div class='mbar'><span style='width:100.0%;background:#2E6BE6'></span></div></td><td class='num'>1,435</td><td class='num'>68</td><td class='num'>4.7%</td></tr>
 <tr class='tot'><td>10.30</td><td>2 点前三票型合计</td><td class='num'>2,250</td><td class='num strong'>2,227</td><td class='num'>23</td><td class='pctcell'><b style='color:#17A673'>99.0%</b><div class='mbar'><span style='width:99.0%;background:#17A673'></span></div></td><td class='num'>2,436</td><td class='num'>209</td><td class='num'>8.6%</td></tr>
-<tr><td></td><td>🌙 晚场票（不限量）</td><td class='num'>不限量</td><td class='num strong'>124</td><td class='num'>—</td><td class='pctcell'><b style='color:#2E6BE6'>—</b><div class='mbar'><span style='width:0%'></span></div></td><td class='num'>124</td><td class='num'>0</td><td class='num'>0.0%</td></tr>
 <tr><td>10.31</td><td>超级早鸟票</td><td class='num'>300</td><td class='num strong'>300</td><td class='num'>0</td><td class='pctcell'><b style='color:#E8543F'>100.0%</b><div class='mbar'><span style='width:100.0%;background:#E8543F'></span></div></td><td class='num'>405</td><td class='num'>105</td><td class='num'>25.9%</td></tr>
-<tr><td></td><td>早场票</td><td class='num'>900</td><td class='num strong'>900</td><td class='num'>0</td><td class='pctcell'><b style='color:#E8543F'>100.0%</b><div class='mbar'><span style='width:100.0%;background:#E8543F'></span></div></td><td class='num'>974</td><td class='num'>74</td><td class='num'>7.6%</td></tr>
-<tr><td></td><td>正价票（含嘉年华会员）</td><td class='num'>1,050</td><td class='num strong'>828</td><td class='num'>222</td><td class='pctcell'><b style='color:#E8543F'>78.9%</b><div class='mbar'><span style='width:78.9%;background:#E8543F'></span></div></td><td class='num'>907</td><td class='num'>79</td><td class='num'>8.7%</td></tr>
-<tr class='tot'><td>10.31</td><td>2 点前三票型合计</td><td class='num'>2,250</td><td class='num strong'>2,028</td><td class='num'>222</td><td class='pctcell'><b style='color:#17A673'>90.1%</b><div class='mbar'><span style='width:90.1%;background:#17A673'></span></div></td><td class='num'>2,286</td><td class='num'>258</td><td class='num'>11.3%</td></tr></tbody></table></div>
+<tr><td></td><td>早场票</td><td class='num'>900</td><td class='num strong'>897</td><td class='num'>3</td><td class='pctcell'><b style='color:#E8543F'>99.7%</b><div class='mbar'><span style='width:99.7%;background:#E8543F'></span></div></td><td class='num'>975</td><td class='num'>77</td><td class='num'>7.9%</td></tr>
+<tr><td></td><td>正价票（含嘉年华会员）</td><td class='num'>1,050</td><td class='num strong'>864</td><td class='num'>186</td><td class='pctcell'><b style='color:#E8543F'>82.3%</b><div class='mbar'><span style='width:82.3%;background:#E8543F'></span></div></td><td class='num'>945</td><td class='num'>81</td><td class='num'>8.6%</td></tr>
+<tr class='tot'><td>10.31</td><td>2 点前三票型合计</td><td class='num'>2,250</td><td class='num strong'>2,061</td><td class='num'>189</td><td class='pctcell'><b style='color:#17A673'>91.6%</b><div class='mbar'><span style='width:91.6%;background:#17A673'></span></div></td><td class='num'>2,325</td><td class='num'>263</td><td class='num'>11.3%</td></tr>
+<tr><td></td><td>🌙 晚场票（不限量）</td><td class='num'>不限量</td><td class='num strong'>124</td><td class='num'>—</td><td class='pctcell'><b style='color:#E8543F'>—</b><div class='mbar'><span style='width:0%'></span></div></td><td class='num'>124</td><td class='num'>0</td><td class='num'>0.0%</td></tr></tbody></table></div>
 <div class="hint" style="margin:12px 0 0">单位：张。已售 = 支付成功票数（已扣退款成功），非核销。</div></div>
 <div class="card"><h2>口径与模型备注</h2><div class="note">
 <b>① 库存</b>：超早 300 / 早场 900 / 正价 1,050，每晚独立。<br>
@@ -427,5 +441,5 @@ tr.tot td { background:#FAFBFC; font-weight:600; border-top:1.5px solid #E8EAED;
 <b>③ 票型归并</b>：嘉年华会员专属并入正价；剔除 City Drink、限时参团、员工福利场次票。<br>
 <b>④ 销售窗口</b>：场次票仅在当天售卖，并延续至自然日次日 0 点后（sale_dt 次日计入该场 T-0）；超早 21:00 / 早场 22:00 停售（预测中到点未罄标记为「停售」，需求顺延至下一票型）；10.30 场晚场票 10.31 凌晨 2 点起售、不限量、不计入合计。<br>
 <b>⑤ 预测模型</b>：9/29–10/29 共 13 个已结束场次的分销售日累计占比经验外推（普通周五当天 71%–76%；普通周六 T-1 ~31% / T-0 ~29%）；含票型溢出顺移与当天分时曲线。<br>
-<b>⑥ 数据源</b>：Superset 看板 27，数据集 53，看板缓存 5 分钟；本页每小时自动生成（Cloudflare Worker）。</div></div>
-<div class="foot">INS LAND · 万圣节票务库存监测 · 生成于 2026-10-31 13:11</div></div></body></html>
+<b>⑥ 数据源</b>：Superset 看板 27，数据集 53，看板缓存 5 分钟；本页每小时自动生成。</div></div>
+<div class="foot">INS LAND · 万圣节票务库存监测 · 生成于 2026-10-31 14:05</div></div></body></html>
