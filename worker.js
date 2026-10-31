@@ -3,13 +3,15 @@
 // env secrets: FEISHU_WEBHOOK, GH_TOKEN, RUN_KEY ; vars: PAGES_URL, GH_REPO
 const BASE = "https://kanban.mmweb.top";
 const DATASET = 53;
-const STOCK = { "超早": 300, "早场": 900, "正价": 1050 };
+const STOCK = { "10.30": { "超早": 300, "早场": 900, "正价": 1050 },
+  "10.31": { "超早": 600, "早场": 900, "正价": 1050 } };   // 10.31 场超早 10.31 下午加量 300
+const STOCK_TOT = Object.fromEntries(Object.entries(STOCK).map(([k, v]) => [k, Object.values(v).reduce((a, b) => a + b, 0)]));   // 10.30: 2250 / 10.31: 2550
 const TICKET_MAP = { "超级早鸟票": "超早", "早场票": "早场", "正价票": "正价", "嘉年华会员专属": "正价" };
 const NIGHTS_TS = { 1793390400000: "10.30", 1793476800000: "10.31" };
 const LATE_START_MS = Date.UTC(2026, 9, 30, 18, 0);   // 10.30 场晚场票 10.31 02:00(北京) 起售（不限量，不计入合计）
 const CUTOFF = { "超早": 21, "早场": 22, "正价": 99 }; // 停售时点：超早 21:00 / 早场 22:00（正价不限）
 const SINGLE_DATASET = 55;                            // 单店票数据集（看板27【实时】单店票售卖情况总览）
-const SINGLE_EXCLUDE = ["HERO DOME", "SOUL HOUSE by INS新乐园", "复兴公园游乐场"];   // 单店票剔除门店
+const SINGLE_EXCLUDE = ["HERO DOME", "SOUL HOUSE by INS新乐园", "复兴公园游乐场", "ParkCoffeeClub"];   // 单店票剔除门店
 const FRI_T0 = 0.74, HOLIDAY_T0 = 0.615, SAT_T1 = 0.31, SAT_T0 = 0.29;
 const T0_PROFILE = { 9: .04, 10: .05, 11: .06, 12: .07, 13: .08, 14: .09, 15: .09, 16: .09, 17: .08, 18: .08, 19: .07, 20: .07, 21: .06, 22: .04, 23: .02, 24: .01 };
 const T1_PROFILE = { 9: .03, 10: .05, 11: .06, 12: .08, 13: .09, 14: .10, 15: .10, 16: .10, 17: .09, 18: .08, 19: .07, 20: .06, 21: .04, 22: .03, 23: .01, 24: .01 };
@@ -31,6 +33,7 @@ function tsToIso(ts) { return iso(new Date(ts + 8 * 3600e3)); }
 
 const pct = (a, b) => (!b ? 0 : a / b * 100);
 const fmt = (n) => Math.round(n).toLocaleString("en-US");
+const dq = (n) => (n > 0 ? "+" + fmt(n) : fmt(n));   // 带符号增量：+12 / -60
 function tw(text, size, bold) {
   let w = 0;
   for (const ch of String(text)) {
@@ -180,11 +183,12 @@ function figProgress(D) {
     const trate = n.pct;
     out.push(`<text x="${x + 22}" y="${y + 24}" fill="${INK}" font-size="15" font-weight="700">2 点前三票型合计</text>`);
     out.push(`<text x="${x + PW - 22}" y="${y + 24}" fill="${GREEN}" font-size="21" font-weight="700" text-anchor="end">${f1(trate)}%</text>`);
-    out.push(`<text x="${x + 22}" y="${y + 44}" fill="${SUB}" font-size="11.5">库存总量 2,250（300+900+1050）· 已售 ${fmt(n.paid)} · 待售 ${fmt(n.left)}</text>`);
+    const stockStr = ["超早", "早场", "正价"].map(t => STOCK[k][t]).join("+");
+    out.push(`<text x="${x + 22}" y="${y + 44}" fill="${SUB}" font-size="11.5">库存总量 ${fmt(n.stock)}（${stockStr}）· 已售 ${fmt(n.paid)} · 待售 ${fmt(n.left)}</text>`);
     const by2 = y + 52;
     out.push(`<rect x="${x + 22}" y="${by2}" width="${barw}" height="26" rx="6" fill="${LINE}"/>`);
     out.push(`<rect x="${x + 22}" y="${by2}" width="${(barw * trate / 100).toFixed(1)}" height="26" rx="6" fill="${GREEN}"/>`);
-    const lab2 = `${fmt(n.paid)}/2,250`, fw2 = barw * trate / 100;
+    const lab2 = `${fmt(n.paid)}/${fmt(n.stock)}`, fw2 = barw * trate / 100;
     out.push(`<text x="${fw2 > 78 ? x + 32 : (x + 22 + fw2 + 9).toFixed(1)}" y="${by2 + 18}" fill="${fw2 > 78 ? "#FFF" : INK}" font-size="12.5" font-weight="600">${lab2}</text>`);
     if (showLate) {
       const la = D.late[k], ly = by2 + 52;
@@ -238,7 +242,8 @@ function figForecast(D, mobile) {
   let W, H, x0, x1, ytop, ybot;
   if (mobile) { W = 560; H = 400; x0 = 44; x1 = W - 16; ytop = 46; ybot = 318; }
   else { W = 1132; H = 356; x0 = 70; x1 = W - 190; ytop = 40; ybot = 280; }
-  const ymax = 2600, gstep = mobile ? 650 : 400;
+  const ymax = 2800, gstep = mobile ? 700 : 400;
+  const c30 = STOCK_TOT["10.30"], c31 = STOCK_TOT["10.31"];
   const dates = D.dates, cum = D.cum, today = D.today;
   const future = [];
   let d = new Date(dates[dates.length - 1] + "T00:00:00Z").getTime() + 86400e3;
@@ -252,8 +257,10 @@ function figForecast(D, mobile) {
     out.push(`<line x1="${x0}" y1="${Y(v).toFixed(1)}" x2="${x1}" y2="${Y(v).toFixed(1)}" stroke="${LINE}" ${v ? 'stroke-dasharray="3 4"' : ""}/>`);
     out.push(`<text x="${x0 - 6}" y="${(Y(v) + 3.5).toFixed(1)}" fill="${FAINT}" font-size="10" text-anchor="end">${fmt(v)}</text>`);
   }
-  out.push(`<line x1="${x0}" y1="${Y(2250).toFixed(1)}" x2="${x1}" y2="${Y(2250).toFixed(1)}" stroke="${AMBER}" stroke-width="1.4" stroke-dasharray="6 5"/>`);
-  out.push(`<text x="${x0 + 6}" y="${(Y(2250) - 6).toFixed(1)}" fill="${AMBER}" font-size="10.5" font-weight="600">库存上限 2,250</text>`);
+  out.push(`<line x1="${x0}" y1="${Y(c30).toFixed(1)}" x2="${x1}" y2="${Y(c30).toFixed(1)}" stroke="${AMBER}" stroke-width="1.4" stroke-dasharray="6 5"/>`);
+  out.push(`<text x="${x0 + 6}" y="${(Y(c30) - 6).toFixed(1)}" fill="${AMBER}" font-size="10.5" font-weight="600">10.30 库存上限 ${fmt(c30)}</text>`);
+  out.push(`<line x1="${x0}" y1="${Y(c31).toFixed(1)}" x2="${x1}" y2="${Y(c31).toFixed(1)}" stroke="${ORANGE}" stroke-width="1.4" stroke-dasharray="6 5"/>`);
+  out.push(`<text x="${x0 + 6}" y="${(Y(c31) - 6).toFixed(1)}" fill="${ORANGE}" font-size="10.5" font-weight="600">10.31 库存上限 ${fmt(c31)}（超早+300）</text>`);
   const labelEvery = mobile ? 3 : 2;
   datesExt.forEach((dt, i) => {
     if (i % labelEvery === 0 || i >= n - 2) {
@@ -281,15 +288,15 @@ function figForecast(D, mobile) {
     const f31 = fc["10.31"];
     const xs = X(iToday), ys = Y(cum["10.31"][cum["10.31"].length - 1]);
     const drawHit = (fx, lab) => {
-      out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${Y(2250).toFixed(1)}" fill="none" stroke="${ORANGE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
-      out.push(`<circle cx="${fx.toFixed(1)}" cy="${Y(2250).toFixed(1)}" r="6" fill="${ORANGE}"/><text x="${fx.toFixed(1)}" y="${(Y(2250) + 3.5).toFixed(1)}" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>`);
-      out.push(`<text x="${(fx - 8).toFixed(1)}" y="${(Y(2250) - 22).toFixed(1)}" fill="${ORANGE}" font-size="${fs}" font-weight="700" text-anchor="end">${lab}</text>`);
+      out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${Y(c31).toFixed(1)}" fill="none" stroke="${ORANGE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
+      out.push(`<circle cx="${fx.toFixed(1)}" cy="${Y(c31).toFixed(1)}" r="6" fill="${ORANGE}"/><text x="${fx.toFixed(1)}" y="${(Y(c31) + 3.5).toFixed(1)}" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>`);
+      out.push(`<text x="${(fx - 8).toFixed(1)}" y="${(Y(c31) - 22).toFixed(1)}" fill="${ORANGE}" font-size="${fs}" font-weight="700" text-anchor="end">${lab}</text>`);
     };
     if (f31.sellout) {
       const h = f31.full_hour;
       drawHit(X(iToday) + step * Math.min(h, 36) / 24,
         mobile ? `10.31场 ${hh(h)}售罄` : `10.31 场 · 预计 ${hh(h)} 售罄`);
-    } else if (f31.final_est >= 2250) {
+    } else if (f31.final_est >= c31) {
       // 今日(T-1)卖不完，但需求外推超库存 → 明日(T-0)必售罄，按 T0 分时估明日钟点
       const soldToday31 = (D.daily["10.31"] || {})[today] || 0;
       const remAfter = D.nights["10.31"].left - Math.max(f31.inc_today - soldToday31, 0);
@@ -309,7 +316,7 @@ function figForecast(D, mobile) {
       const fx = X(iToday) + step * 1.5;
       const fy = Y(Math.min(f31.final_est, ymax));
       out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${fy.toFixed(1)}" fill="none" stroke="${ORANGE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
-      const lab = mobile ? `10.31场 收官~${fmt(f31.final_est)} 不售罄` : `10.31 场 · 预计收官 ~${fmt(f31.final_est)}（${Math.round(f31.final_est / 2250 * 100)}%），不售罄`;
+      const lab = mobile ? `10.31场 收官~${fmt(f31.final_est)} 不售罄` : `10.31 场 · 预计收官 ~${fmt(f31.final_est)}（${Math.round(f31.final_est / c31 * 100)}%），不售罄`;
       out.push(`<text x="${(fx - 8).toFixed(1)}" y="${(fy - 10).toFixed(1)}" fill="${ORANGE}" font-size="${fs}" font-weight="700" text-anchor="end">${lab}</text>`);
     }
   }
@@ -317,21 +324,21 @@ function figForecast(D, mobile) {
     const f30 = fc["10.30"], xs = X(iToday), ys = Y(cum["10.30"][cum["10.30"].length - 1]);
     if (f30.full_hour && f30.full_hour < 99) {
       const fx = X(iToday) + step * Math.min(f30.full_hour, 24) / 24;
-      out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${Y(2250).toFixed(1)}" fill="none" stroke="${BLUE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
-      out.push(`<circle cx="${fx.toFixed(1)}" cy="${Y(2250).toFixed(1)}" r="6" fill="${BLUE}"/><text x="${fx.toFixed(1)}" y="${(Y(2250) + 3.5).toFixed(1)}" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>`);
+      out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${Y(c30).toFixed(1)}" fill="none" stroke="${BLUE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
+      out.push(`<circle cx="${fx.toFixed(1)}" cy="${Y(c30).toFixed(1)}" r="6" fill="${BLUE}"/><text x="${fx.toFixed(1)}" y="${(Y(c30) + 3.5).toFixed(1)}" fill="#FFF" font-size="10" font-weight="700" text-anchor="middle">罄</text>`);
       const lab = mobile ? `10.30场 强场景${hh(f30.full_hour)}` : `10.30 场 · 强场景 ${hh(f30.full_hour)} 售罄`;
-      out.push(`<text x="${fx.toFixed(1)}" y="${(Y(2250) + 22).toFixed(1)}" fill="${BLUE}" font-size="${fs}" font-weight="700" text-anchor="middle">${lab}</text>`);
+      out.push(`<text x="${fx.toFixed(1)}" y="${(Y(c30) + 22).toFixed(1)}" fill="${BLUE}" font-size="${fs}" font-weight="700" text-anchor="middle">${lab}</text>`);
     } else {
-      const send_ = Math.min(f30.strong_final, 2250);
+      const send_ = Math.min(f30.strong_final, c30);
       const fx = X(iToday) + step * 0.9;
       out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${fx.toFixed(1)} ${Y(send_).toFixed(1)}" fill="none" stroke="${BLUE}" stroke-width="2.2" stroke-dasharray="6 5"/>`);
-      const slab = `强场景收官 ~${fmt(send_)}（${Math.round(send_ / 2250 * 100)}%）`;
+      const slab = `强场景收官 ~${fmt(send_)}（${Math.round(send_ / c30 * 100)}%）`;
       if (mobile) out.push(`<text x="${x1 - 2}" y="${(Y(send_) - 8).toFixed(1)}" fill="${BLUE}" font-size="10" text-anchor="end">${slab}</text>`);
       else out.push(`<text x="${(X(iToday) + step * 0.95).toFixed(1)}" y="${(Y(send_) - 8).toFixed(1)}" fill="${BLUE}" font-size="11.5" font-weight="600">${slab}</text>`);
     }
     const wend = Math.min(cum["10.30"][cum["10.30"].length - 1] + f30.weak_today, f30.weak_final);
     out.push(`<path d="M ${xs.toFixed(1)} ${ys.toFixed(1)} L ${(X(iToday) + step * 0.9).toFixed(1)} ${Y(wend).toFixed(1)}" fill="none" stroke="${BLUE}" stroke-width="1.8" stroke-dasharray="2 5" stroke-opacity="0.75"/>`);
-    const wlab = `弱场景收官 ~${fmt(wend)}（${Math.round(wend / 2250 * 100)}%）`;
+    const wlab = `弱场景收官 ~${fmt(wend)}（${Math.round(wend / c30 * 100)}%）`;
     if (mobile) out.push(`<text x="${x1 - 2}" y="${(Y(wend) + 12).toFixed(1)}" fill="${BLUE}" font-size="10" text-anchor="end">${wlab}</text>`);
     else out.push(`<text x="${(X(iToday) + step * 0.95).toFixed(1)}" y="${(Y(wend) + 14).toFixed(1)}" fill="${BLUE}" font-size="11.5">${wlab}</text>`);
   }
@@ -398,7 +405,7 @@ function predTable(D) {
     entries.push(["10.31 万圣夜", "全场合计", fmt(n.left),
       f.sellout ? `预计 ${hh(f.full_hour)} 售罄，10.31 当天无票` : "预计有剩票",
       f.sellout ? "高" : "中",
-      `T-2 末累计 ${fmt(n.paid)} 张，需求外推 ~${fmt(f.final_est)} ≫ 2,250`]);
+      `T-2 末累计 ${fmt(n.paid)} 张，需求外推 ~${fmt(f.final_est)} ≫ ${fmt(STOCK_TOT["10.31"])}`]);
   }
   if (fc["10.30"]) {
     const f = fc["10.30"], n = D.nights["10.30"];
@@ -413,8 +420,8 @@ function predTable(D) {
       }
     }
     const when30 = (f.full_hour && f.full_hour < 99)
-      ? `强场景：${hh(f.full_hour)} 售罄；弱场景：收官 ~${fmt(f.weak_final)}（${Math.round(f.weak_final / 2250 * 100)}%）`
-      : `按当前卖速收官 ~${fmt(f.strong_final)}（${Math.round(f.strong_final / 2250 * 100)}%），预计不售罄`;
+      ? `强场景：${hh(f.full_hour)} 售罄；弱场景：收官 ~${fmt(f.weak_final)}（${Math.round(f.weak_final / STOCK_TOT["10.30"] * 100)}%）`
+      : `按当前卖速收官 ~${fmt(f.strong_final)}（${Math.round(f.strong_final / STOCK_TOT["10.30"] * 100)}%），预计不售罄`;
     entries.push(["10.30 周五", "全场合计", fmt(n.left), when30, "中",
       "取决于当天购买占比：普通周五 71%–76% → 售罄；假日型提前预订 → 不售罄"]);
   }
@@ -453,7 +460,7 @@ function detailTable(D) {
     });
     const so = ["超早", "早场", "正价"].reduce((s, t) => s + n.per[t].order, 0);
     const sr = ["超早", "早场", "正价"].reduce((s, t) => s + n.per[t].refund, 0);
-    rows.push(`<tr class='tot'><td>${k}</td><td>2 点前三票型合计</td><td class='num'>2,250</td><td class='num strong'>${fmt(n.paid)}</td><td class='num'>${fmt(n.left)}</td><td class='pctcell'><b style='color:${GREEN}'>${f1(n.pct)}%</b><div class='mbar'><span style='width:${f1(Math.min(n.pct, 100))}%;background:${GREEN}'></span></div></td><td class='num'>${fmt(so)}</td><td class='num'>${fmt(sr)}</td><td class='num'>${f1(pct(sr, so))}%</td></tr>`);
+    rows.push(`<tr class='tot'><td>${k}</td><td>2 点前三票型合计</td><td class='num'>${fmt(n.stock)}</td><td class='num strong'>${fmt(n.paid)}</td><td class='num'>${fmt(n.left)}</td><td class='pctcell'><b style='color:${GREEN}'>${f1(n.pct)}%</b><div class='mbar'><span style='width:${f1(Math.min(n.pct, 100))}%;background:${GREEN}'></span></div></td><td class='num'>${fmt(so)}</td><td class='num'>${fmt(sr)}</td><td class='num'>${f1(pct(sr, so))}%</td></tr>`);
     if (D.late && D.late[k] && D.late[k].show) {
       const la = D.late[k];
       rows.push(`<tr><td></td><td>🌙 晚场票（不限量）</td><td class='num'>不限量</td><td class='num strong'>${fmt(la.paid)}</td><td class='num'>—</td><td class='pctcell'><b style='color:${ORANGE}'>—</b><div class='mbar'><span style='width:0%'></span></div></td><td class='num'>${fmt(la.order)}</td><td class='num'>${fmt(la.refund)}</td><td class='num'>${f1(pct(la.refund, la.order))}%</td></tr>`);
@@ -510,26 +517,26 @@ function render(D) {
   const h30 = fc["10.30"] ? fc["10.30"].full_hour : null;
   let hint2 = "用户以当天购入为主：近 4 周普通周五当天购买占 <b>71%–76%</b>，普通周六 T-1 日占 ~31%、T-0 占 ~29%。";
   if (h31 && h31 < 99) hint2 += ` 据此外推：<b style='color:${ORANGE}'>10.31 场预计 ${hh(h31)} 售罄，当天无票可售</b>；`;
-  if (h30 && h30 < 99) hint2 += `<b style='color:${BLUE}'>10.30 场强场景下 ${hh(h30)} 售罄</b>（弱场景收官约 ${Math.round(fc["10.30"].weak_final / 2250 * 100)}%）。`;
+  if (h30 && h30 < 99) hint2 += `<b style='color:${BLUE}'>10.30 场强场景下 ${hh(h30)} 售罄</b>（弱场景收官约 ${Math.round(fc["10.30"].weak_final / STOCK_TOT["10.30"] * 100)}%）。`;
   else if (fc["10.30"]) {
     const f30 = fc["10.30"];
-    hint2 += `<b style='color:${BLUE}'>10.30 场按当前卖速预计收官 ~${fmt(f30.strong_final)}（${Math.round(f30.strong_final / 2250 * 100)}%），不售罄</b>。`;
+    hint2 += `<b style='color:${BLUE}'>10.30 场按当前卖速预计收官 ~${fmt(f30.strong_final)}（${Math.round(f30.strong_final / STOCK_TOT["10.30"] * 100)}%），不售罄</b>。`;
   }
   let html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"><meta http-equiv="refresh" content="3600">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache">
 <title>万圣节库存消耗进度 · 10.30 / 10.31</title><style>__CSS__</style></head><body><div class="container">
 <div class="card"><h1>万圣节库存消耗进度 · 10.30（周五）vs 10.31（周六 · 万圣夜）</h1>
-<div class="subtitle">数据截至 <b>__STAMP__</b>（每小时自动更新）｜ 来源：Superset 看板 27【实时】散客票务监测 ｜ 口径：<b>支付成功票数 ÷ 单日库存</b>（超早 300 / 早场 900 / 正价 1,050，每晚独立）｜ 已剔除 City Drink、限时参团、员工福利场次票；<b>嘉年华会员专属并入正价票</b>；场次销售延续至自然日次日 0 点后（计入该场）</div></div>
+<div class="subtitle">数据截至 <b>__STAMP__</b>（每小时自动更新）｜ 来源：Superset 看板 27【实时】散客票务监测 ｜ 口径：<b>支付成功票数 ÷ 单日库存</b>（10.30：超早 300 / 早场 900 / 正价 1,050；10.31：超早 600（已加量 300）/ 早场 900 / 正价 1,050，每晚独立）｜ 已剔除 City Drink、限时参团、员工福利场次票；<b>嘉年华会员专属并入正价票</b>；场次销售延续至自然日次日 0 点后（计入该场）</div></div>
 <div class="card"><h2>① 分晚 · 各票型库存消耗进度<span>条内数字 = 已售 / 库存</span></h2>
-<div class="hint">左右两栏为 10.30 与 10.31 两个独立场次；末行「2 点前三票型合计」对应每晚 2,250 张的 2 点前库存池。</div>__FIG1__</div>
+<div class="hint">左右两栏为 10.30 与 10.31 两个独立场次；末行「2 点前三票型合计」对应每晚 2 点前库存池（10.30 场 2,250 张，10.31 场加量后 2,550 张）。</div>__FIG1__</div>
 <div class="card"><h2>② 售罄预测<span>基于历史场次"当天购入"规律外推</span></h2>
 <div class="hint">__HINT2__</div>__FIG3____PRED__
 <div class="hint" style="margin:12px 0 0">售罄钟点为经验估计：按当天分时购买曲线（高峰 14:00–22:00）推算，数据粒度为日级，实际可能前后漂移 1–2 小时。</div></div>
 <div class="card"><h2>③ 两晚同票型消耗率对比<span>同口径横向可比</span></h2>__FIG2__</div>
 <div class="card"><h2>④ 近 7 日单日新增支付票数<span>卖速趋势</span></h2>__FIG4__</div>
 <div class="card"><h2>⑤ 10.31 单店票售卖 · 按门店<span>数据集55【实时】单店票售卖情况总览</span></h2>
-<div class="hint">当天全部场次单店票支付成功票数；已剔除 HERO DOME、SOUL HOUSE、复兴公园游乐场。</div>__SINGLE__</div>
+<div class="hint">当天全部场次单店票支付成功票数；已剔除 HERO DOME、SOUL HOUSE、复兴公园游乐场、ParkCoffeeClub。</div>__SINGLE__</div>
 <div class="card"><h2>⑥ 明细数据</h2>__TABLE__
 <div class="hint" style="margin:12px 0 0">单位：张。已售 = 支付成功票数（已扣退款成功），非核销。</div></div>
 <div class="card"><h2>口径与模型备注</h2><div class="note">
@@ -560,17 +567,17 @@ async function sendFeishu(env, D) {
   {
     const k = "10.31", n = D.nights[k], lab = "10.31 周六·万圣夜";
     const dd = (D.deltas || {})[k];
-    const inc = dd ? `　⏫ 较上小时 **+${fmt(dd.total)}**` : "";
-    lines.push(`**${lab}** 合计 ${fmt(n.paid)}/2,250（${f1(n.pct)}%）${inc}`);
+    const inc = dd ? `　⏫ 较上小时 **${dq(dd.total)}**` : "";
+    lines.push(`**${lab}** 合计 ${fmt(n.paid)}/${fmt(n.stock)}（${f1(n.pct)}%）${inc}`);
     for (const t of ["超早", "早场", "正价"]) {
       const p = n.per[t];
       const tag = p.left <= 0 ? "❗已售罄" : (p.left <= 250 ? `⚠️仅剩 ${fmt(p.left)}` : `余 ${fmt(p.left)}`);
-      const d1 = dd && dd[t] ? `（+${fmt(dd[t])}）` : "";
+      const d1 = dd && dd[t] ? `（${dq(dd[t])}）` : "";
       lines.push(`　· ${t}：${fmt(p.paid)}/${fmt(p.stock)}（${f1(p.pct)}%）${tag}${d1}`);
       if (p.left > 0 && p.left <= 250) alerts.push(`${k} ${t} 仅剩 ${fmt(p.left)} 张`);
     }
     if (D.late && D.late[k] && D.late[k].show) {
-      const la = D.late[k], dl = la.delta ? `（+${fmt(la.delta)}）` : "";
+      const la = D.late[k], dl = la.delta ? `（${dq(la.delta)}）` : "";
       lines.push(`　· 🌙 晚场票（不限量）：已售 ${fmt(la.paid)} 张${dl}`);
     }
     const f = (D.forecast || {})[k];
@@ -582,7 +589,7 @@ async function sendFeishu(env, D) {
       } else {
         const soldSeg = ["超早", "早场", "正价"].filter(t => n.per[t].left > 0 && hs[t] && hs[t] > 0 && hs[t] < 99).map(t => `${t} ${hh(hs[t])} 售罄`).join("、");
         const tail = soldSeg ? "；" + soldSeg : "";
-        lines.push(`　📈 预测：按当前卖速收官 ~${fmt(f.final_est)}（${Math.round(f.final_est / 2250 * 100)}%）预计不售罄${tail}`);
+        lines.push(`　📈 预测：按当前卖速收官 ~${fmt(f.final_est)}（${Math.round(f.final_est / n.stock * 100)}%）预计不售罄${tail}`);
       }
     }
   }
@@ -591,11 +598,11 @@ async function sendFeishu(env, D) {
   if (s.per && Object.keys(s.per).length) {
     lines.push("");
     lines.push("— — — — — — — — — —");
-    const d1 = s.delta ? `　⏫ 较上小时 **+${fmt(s.delta)}**` : "";
+    const d1 = s.delta ? `　⏫ 较上小时 **${dq(s.delta)}**` : "";
     lines.push(`**10.31 单店票** 合计 ${fmt(s.total)} 张（${Object.keys(s.per).length} 家店）${d1}`);
     const pd = s.per_delta || {};
     const shopSeg = Object.entries(s.per).sort((a, b) => b[1] - a[1])
-      .map(([m, v]) => `${m} ${fmt(v)}${pd[m] ? `（+${fmt(pd[m])}）` : ""}`).join(" · ");
+      .map(([m, v]) => `${m} ${fmt(v)}${pd[m] ? `（${dq(pd[m])}）` : ""}`).join(" · ");
     lines.push("　· " + shopSeg);
   }
   let text = lines.join("\n");
@@ -605,7 +612,7 @@ async function sendFeishu(env, D) {
     const bust = pages.replace(/\/$/, "") + "/?v=202610301004";
     elements.push({ tag: "action", actions: [{ tag: "button", text: { tag: "plain_text", content: "📊 打开完整看板（含预测曲线）" }, url: bust, type: "primary" }] });
   }
-  const note = "已售=支付成功(扣退款)；嘉年华会员并入正价；不含City Drink/参团/员工票；销售延续至次日0点后；超早21:00/早场22:00停售；单店票不含HERO DOME/SOUL HOUSE/复兴公园游乐场；晚场票不限量、不计入合计";
+  const note = "已售=支付成功(扣退款)；嘉年华会员并入正价；不含City Drink/参团/员工票；销售延续至次日0点后；超早21:00/早场22:00停售；超早已加量300(库存600)；单店票不含HERO DOME/SOUL HOUSE/复兴公园游乐场/ParkCoffeeClub；晚场票不限量、不计入合计";
   elements.push({ tag: "note", elements: [{ tag: "plain_text", content: note }] });
   const card = { msg_type: "interactive", card: { header: { title: { tag: "plain_text", content: "🎃 万圣节库存监控 · " + D.stamp }, template: alerts.length ? "red" : "orange" }, elements } };
   const r = await fetch(hook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(card) });
@@ -666,10 +673,12 @@ async function run(env, force) {
     const per = {};
     for (const t of ["超早", "早场", "正价"]) {
       const a = agg[night + "|" + t] || { order: 0, paid: 0, refund: 0 };
-      per[t] = { order: a.order, paid: a.paid, refund: a.refund, stock: STOCK[t], left: STOCK[t] - a.paid, pct: pct(a.paid, STOCK[t]) };
+      const s = STOCK[night][t];
+      per[t] = { order: a.order, paid: a.paid, refund: a.refund, stock: s, left: s - a.paid, pct: pct(a.paid, s) };
     }
     const tot = per["超早"].paid + per["早场"].paid + per["正价"].paid;
-    D.nights[night] = { per, paid: tot, stock: 2250, left: 2250 - tot, pct: pct(tot, 2250) };
+    const cap = STOCK_TOT[night];
+    D.nights[night] = { per, paid: tot, stock: cap, left: cap - tot, pct: pct(tot, cap) };
   }
   if (prev && prev.nights) {
     for (const night of ["10.30", "10.31"]) {
