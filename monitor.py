@@ -210,13 +210,13 @@ def main():
         try: return datetime.datetime.strptime(p["stamp"], "%Y-%m-%d %H:%M")
         except Exception: return datetime.datetime.min
     prev = max(cands, key=_key) if cands else None
-    # 防重复：任一来源 <40 分钟则跳过（FORCE=1 强制）
+    # 防重复：任一来源 <40 分钟且该轮已推过卡片则跳过（FORCE=1 强制；仅刷链接不推卡片的运行不挡定时推送）
     if not os.environ.get("FORCE"):
         for p in cands:
             try:
                 age = (now - _key(p)).total_seconds() / 60
-                if age < 40:
-                    print("skip: last run %.0f min ago (%s)" % (age, p["stamp"])); return
+                if age < 40 and p.get("card_pushed"):
+                    print("skip: last card push %.0f min ago (%s)" % (age, p["stamp"])); return
             except Exception:
                 pass
     agg, daily, late, single = load_data()
@@ -326,6 +326,7 @@ def main():
                        "hours": hours31, "full_hour": full31,
                        "sellout": bool(full31 and full31 < 99)}
     D["forecast"] = fc
+    D["card_pushed"] = bool(os.environ.get("FEISHU_WEBHOOK", "").strip())   # 本轮是否推卡片（防重复依据）
 
     os.makedirs("report", exist_ok=True)
     latest_str = json.dumps(D, ensure_ascii=False, indent=1, default=str)
