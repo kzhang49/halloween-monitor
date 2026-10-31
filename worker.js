@@ -638,7 +638,7 @@ async function run(env, force) {
   const now = bjNow();
   const today = iso(now), stamp = stampOf(now);
   const prev = env.PAGES_URL ? await fetchPrev(env.PAGES_URL) : null;
-  if (!force && prev && prev.stamp) {
+  if (!force && prev && prev.stamp && prev.card_pushed) {
     const age = (Date.now() - parseStamp(prev.stamp)) / 60000;
     if (age < 40) return { skipped: true, age };
   }
@@ -740,6 +740,7 @@ async function run(env, force) {
       sellout: Boolean(full31 && full31 < 99) };
   }
   D.forecast = fc;
+  D.card_pushed = !!(env.FEISHU_WEBHOOK || "").trim();   // 本轮是否推卡片（防重复依据）
 
   const html = render(D);
   const latest = JSON.stringify(D);
