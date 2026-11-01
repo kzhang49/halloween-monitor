@@ -2,3 +2,5 @@ report/
 __pycache__/
 .env
 .cf.env
+
+# paused 2026-11-01
